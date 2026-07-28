@@ -17,6 +17,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Pemilik Hak Cipta
+    |--------------------------------------------------------------------------
+    |
+    | Identitas pemegang hak cipta aplikasi yang ditampilkan pada footer.
+    | "owner" dipakai untuk tampilan ringkas, "owner_full" untuk nama resmi
+    | lembaga, dan "copyright_year" adalah tahun aplikasi pertama kali
+    | diumumkan/dipublikasikan (bukan tahun berjalan).
+    |
+    */
+
+    'owner' => env('APP_OWNER', 'RSPI Prof. Dr. Sulianti Saroso'),
+
+    'owner_full' => env('APP_OWNER_FULL', 'Rumah Sakit Penyakit Infeksi Prof. Dr. Sulianti Saroso'),
+
+    'copyright_year' => env('APP_COPYRIGHT_YEAR', 2025),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

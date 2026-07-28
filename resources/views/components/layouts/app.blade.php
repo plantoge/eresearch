@@ -25,7 +25,7 @@
         <label for="main-drawer" class="lg:hidden mr-3">
             <x-mary-icon name="o-bars-3" class="cursor-pointer" />
         </label>
-        <div class="font-bold text-lg">eProposal <span class="text-primary">RSPI</span></div>
+        <div class="font-bold text-lg">eResearch <span class="text-primary">Proposal</span></div>
     </x-slot:brand>
     <x-slot:actions>
         {{-- Pilihan tema daisyUI --}}
@@ -71,8 +71,18 @@
     <x-slot:sidebar drawer="main-drawer" collapsible class="bg-base-100">
         <livewire:layout.sidebar />
     </x-slot:sidebar>
-    <x-slot:content>
-        {{ $slot }}
+    {{-- Notis hak cipta ditaruh di dalam slot content, bukan slot footer milik
+         x-mary-main: slot footer dirender di luar drawer sehingga menambah
+         tinggi halaman dan menyisakan ruang kosong di bawah sidebar.
+         Tinggi konten dikunci setinggi viewport dikurangi navbar (65px, angka
+         yang sama dipakai x-mary-main untuk sidebar) lalu isi halaman dibungkus
+         flex-1 agar notis selalu menempel di dasar layar meski halaman pendek. --}}
+    <x-slot:content class="min-h-[calc(100vh-65px)] flex flex-col">
+        <div class="flex-1">
+            {{ $slot }}
+        </div>
+
+        <x-copyright class="mt-8 pt-4 border-t border-base-300" />
     </x-slot:content>
 </x-mary-main>
 
