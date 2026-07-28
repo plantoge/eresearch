@@ -65,7 +65,9 @@ enum ProposalStatus: string
             // Tahap 1 (CRU)
             self::MenungguVerifikasiBerkas => [self::PerluRevisiProposal, self::MenungguPresentasi, self::Ditolak],
             self::PerluRevisiProposal => [self::MenungguVerifikasiRevisi],
-            self::MenungguVerifikasiRevisi => [self::PerluRevisiProposal, self::MenungguPresentasi, self::Ditolak],
+            // Loloskan langsung ke KEPK: presentasi pada praktiknya cukup sekali, jadi
+            // revisi yang sudah memuaskan tidak perlu dijadwalkan presentasi ulang.
+            self::MenungguVerifikasiRevisi => [self::MenungguKelengkapanBerkasEtik, self::PerluRevisiProposal, self::MenungguPresentasi, self::Ditolak],
             self::MenungguPresentasi => [self::MenungguKelengkapanBerkasEtik, self::PerluRevisiProposal, self::Ditolak],
             // Tahap 2 (KEPK + Reviewer) — KEPK perantara: tunjuk reviewer,
             // terima jawaban reviewer, teruskan revisi ke peneliti.

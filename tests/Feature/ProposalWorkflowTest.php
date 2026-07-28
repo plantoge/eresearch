@@ -109,6 +109,22 @@ class ProposalWorkflowTest extends TestCase
         $this->assertSame(Unit::KajiEtik, $p->fresh()->unit_sekarang);
     }
 
+    public function test_loloskan_ke_kepk_setelah_verifikasi_revisi(): void
+    {
+        $p = $this->buatProposal();
+
+        // Presentasi → CRU minta revisi → peneliti kirim revisi
+        foreach ([S::MenungguPresentasi, S::PerluRevisiProposal, S::MenungguVerifikasiRevisi] as $ke) {
+            $this->wf->transition($p, $ke);
+        }
+
+        // Revisi diterima → langsung ke KEPK, tanpa presentasi kedua
+        $this->wf->transition($p, S::MenungguKelengkapanBerkasEtik, 'Revisi diterima');
+
+        $this->assertSame(S::MenungguKelengkapanBerkasEtik, $p->fresh()->status);
+        $this->assertSame(Unit::KajiEtik, $p->fresh()->unit_sekarang);
+    }
+
     public function test_transisi_loncat_ditolak_403(): void
     {
         $p = $this->buatProposal();

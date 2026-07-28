@@ -133,9 +133,12 @@
                         <x-mary-input label="Media" wire:model="media_presentasi" placeholder="mis. Zoom / R. Rapat" />
                     </div>
                     <x-slot:actions>
-                        @if ($proposal->status === ProposalStatus::MenungguPresentasi)
+                        {{-- Loloskan juga tersedia setelah verifikasi revisi: revisi yang sudah
+                             memuaskan tak perlu presentasi ulang hanya demi mencapai tombol ini. --}}
+                        @if (in_array($proposal->status, [ProposalStatus::MenungguPresentasi, ProposalStatus::MenungguVerifikasiRevisi], true))
                             <x-mary-button label="Loloskan ke KEPK" wire:click="loloskan" class="btn-success" spinner />
-                        @else
+                        @endif
+                        @if ($proposal->status !== ProposalStatus::MenungguPresentasi)
                             <x-mary-button label="Minta Presentasi" wire:click="mintaPresentasi" class="btn-info" spinner />
                         @endif
                         <x-mary-button label="Minta Revisi" wire:click="mintaRevisi" class="btn-warning" spinner />
