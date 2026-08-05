@@ -9,7 +9,33 @@
       "Read(//c/Users/simrs/AppData/Local/Temp/claude/d--app-eproposalnew/37aeb924-8d69-41d3-9122-4980b3bd8e8f/tasks/**)",
       "Bash(break)",
       "Bash(npm run *)",
-      "Bash(/c/laragon/bin/php/php-8.4.12-nts-Win32-vs17-x64/php.exe artisan *)"
+      "Bash(/c/laragon/bin/php/php-8.4.12-nts-Win32-vs17-x64/php.exe artisan *)",
+      "WebSearch",
+      "Bash(grep -c '\"php\"\\\\|\\\\.php' /dev/null 2>/dev/null; echo skip)",
+      "Read(//dev/**)",
+      "Bash(python -c \"import json; d=json.load\\(open\\('graphify-out/.graphify_chunk_01.json', encoding='utf-8'\\)\\); print\\('nodes:', len\\(d['nodes']\\)\\); print\\('edges:', len\\(d['edges']\\)\\); print\\('hyperedges:', len\\(d['hyperedges']\\)\\); ids={n['id'] for n in d['nodes']}; print\\('dup node ids:', len\\(d['nodes']\\)-len\\(ids\\)\\); bad=[e for e in d['edges'] if e['source'] not in ids or e['target'] not in ids]; print\\('bad edges:', len\\(bad\\)\\); print\\(bad[:5]\\)\")"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/simrs/.local/bin/graphify.EXE hook-guard search"
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/simrs/.local/bin/graphify.EXE hook-guard read"
+          }
+        ]
+      }
     ]
   }
 }
