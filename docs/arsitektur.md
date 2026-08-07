@@ -12,7 +12,7 @@
 | Framework | Laravel 12 (PHP ^8.2, dev pakai 8.4.12) | |
 | UI | Livewire 3 + Mary UI 2.9 + daisyUI 5 + Tailwind 4 | Filament tidak dipakai (preferensi tim); Flux UI berbayar |
 | Otorisasi | spatie/laravel-permission 8.3 | morph key uuid, `teams => false` |
-| Database | PostgreSQL 14 (`eprotocol`), schema `public` | |
+| Database | PostgreSQL 14, **dua schema**: `public` (bawaan Laravel & spatie) + `rspi` (seluruh domain) | `search_path=public,rspi`; nama DB berbeda per lingkungan — lihat [task.md](task.md) |
 | Primary key | UUIDv7 di semua tabel domain | |
 | Email | Resend (`resend/resend-laravel` 1.4) | |
 | Build front-end | Vite 7 (butuh Node ≥ 20.19) | |
@@ -36,9 +36,11 @@ PHP='/c/laragon/bin/php/php-8.4.12-nts-Win32-vs17-x64/php.exe'
 ```
 app/
 ├── Concerns/HasUuidAndAudit.php      uuid v7 + created_by/updated_by/deleted_by otomatis
-├── Enums/                            ProposalStatus, DocumentType, Unit
+├── Enums/                            ProposalStatus, DocumentType, Unit,
+│                                     TujuanPembayaran, StatusPembayaran, JenisTelaah, KeputusanEtik
 ├── Http/
-│   ├── Controllers/                  DocumentDownloadController, Auth/VerifyEmailController
+│   ├── Controllers/                  DocumentDownloadController, DokumenTelaahDownloadController,
+│   │                                 Auth/VerifyEmailController
 │   └── Middleware/                   EnsureEmailIsVerifiedIfRequired
 ├── Livewire/
 │   ├── Admin/                        Users, Roles, Menus, Survey, Kontak
@@ -47,7 +49,10 @@ app/
 │   ├── Layout/Sidebar.php            menu dinamis ter-filter permission
 │   ├── Proposal/                     Create, Index, Show
 │   └── Dashboard, Laporan, AuditLog, Profile
-├── Models/                           Proposal + turunannya, Menu, InformasiKontak, master survey
+├── Models/                           Proposal + turunannya; berkas kerja CRU (BerkasPenelitian,
+│                                     Pembayaran, IzinPenelitian) & KEPK (ProtokolEtik,
+│                                     PenugasanReviewer, TelaahReviewer, DokumenTelaah);
+│                                     Menu, InformasiKontak, master survey
 ├── Observers/MenuObserver.php        → MenuPermissionSync
 ├── Rules/ValidCaptcha.php
 └── Services/
@@ -65,7 +70,8 @@ komponen yang menyentuh `$proposal->status` langsung:
 | `transition($proposal, $ke, $catatan)` | validasi `canGoTo()` → abort 403 bila loncat; set status + `unit_sekarang`; tulis history; semuanya dalam satu transaksi |
 | `simpanDokumen($proposal, $jenis, $file)` | simpan ke disk `dokumen`, versi naik otomatis per jenis |
 | `tugaskanReviewer($proposal, $ids)` | buat/aktifkan penugasan lalu transisi ke `Menunggu Review Reviewer` |
-| `reviewerMerespons($proposal, $keputusan, ...)` | catat `proposal_reviews` per ronde, update penugasan, auto-transisi bila semua ACC |
+| `simpanDokumenTelaah($proposal, $file, $telaah)` | simpan berkas rahasia telaah ke `kepk_dokumen_telaah` — sengaja bukan lewat `simpanDokumen()` |
+| `reviewerMerespons($proposal, $keputusan, ...)` | catat `kepk_telaah_reviewer` per ronde, update penugasan, auto-transisi bila semua ACC |
 | `resetPenugasanReviewer($proposal)` | kembalikan semua penugasan ke `menunggu` (ronde baru) |
 | `generateKode()` | `RSPISS-YYYY-###` dengan `pg_advisory_xact_lock` per tahun |
 
@@ -119,9 +125,10 @@ Dokumen **tidak** disimpan di dalam folder aplikasi. Disk `dokumen` (`config/fil
 
 - `DOCUMENTS_PATH` mis. `D:\eproposal-files` (dev & server Windows), `/var/eproposal-files` (Linux).
 - Struktur: `proposal/{proposal_id}/{jenis}/{namafile}`; kolom `path` di DB berisi path **relatif**.
-- **Satu-satunya pintu akses** adalah `DocumentDownloadController` — memeriksa kepemilikan/peran,
-  kerahasiaan `tanggapan_reviewer`, dan gate survey untuk `izin_final`. Tidak ada `storage:link`
-  untuk disk ini.
+- **Dua pintu akses, keduanya ber-otorisasi.** `DocumentDownloadController` untuk berkas umum —
+  memeriksa kepemilikan/peran dan gate survey untuk `izin_final`.
+  `DokumenTelaahDownloadController` untuk berkas telaah reviewer — hanya petugas unit, peneliti
+  tidak punya cabang izin sama sekali. Tidak ada `storage:link` untuk disk ini.
 - Pindah ke MinIO/S3 kelak = cukup ganti definisi disk; kode & isi DB tidak berubah.
   (MinIO/SFTP/S3 cloud sudah dipertimbangkan dan ditolak: data penelitian RS sebaiknya tidak
   keluar jaringan, dan server tambahan menambah beban operasional.)

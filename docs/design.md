@@ -146,10 +146,12 @@ Label error bahasa Indonesia lewat argumen ketiga `validate()` (mis. `['catatan'
 
 1. **Tombol aksi hanya dirender bila user berhak.** Sembunyikan dengan `@can('{slug}.{aksi}')`
    di view — tapi jangan berhenti di situ: guard `abort_unless()` di method komponen tetap wajib.
-2. **Kerahasiaan reviewer di UI.** Komentar reviewer, file `tanggapan_reviewer`, dan nama
-   reviewer tidak boleh dirender untuk peneliti. `Show::render()` sudah menyiapkan
-   `$bolehLihatReview` dan menyaring `$dokumen`/`$reviews` — pakai flag itu, jangan buat
-   pengecekan sendiri. Di riwayat status yang dilihat peneliti, pelaku ditulis "Reviewer".
+2. **Kerahasiaan reviewer di UI.** Komentar reviewer, berkas telaah, dan nama reviewer tidak
+   boleh dirender untuk peneliti. `Show::render()` sudah menyiapkan `$bolehLihatReview` dan
+   mengosongkan `$reviews`/`$dokumenTelaah` bagi yang tak berwenang — pakai flag itu, jangan
+   buat pengecekan sendiri. Di riwayat status yang dilihat peneliti, pelaku ditulis "Reviewer".
+   `$dokumen` tidak perlu disaring lagi: berkas telaah ada di tabel `kepk_dokumen_telaah`
+   dengan route unduh sendiri, jadi tidak pernah ikut terbawa ke daftar dokumen peneliti.
 3. **Bahasa Indonesia** untuk semua label, tombol, pesan kosong, dan pesan error.
 4. **Tanpa JS/CDN eksternal.** Interaksi memakai Livewire + Alpine yang sudah ada
    (`wire:model.live.debounce`, `wire:click`, `x-intersect`). Tidak ada script dari luar.

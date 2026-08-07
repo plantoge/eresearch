@@ -25,7 +25,9 @@ enum DocumentType: string
     case IzinFinal = 'izin_final';
     case SuratPenolakan = 'surat_penolakan';
     case SuratTanggapan = 'surat_tanggapan';
-    case TanggapanReviewer = 'tanggapan_reviewer';
+    // Catatan: file tanggapan reviewer TIDAK ada di sini. Berkas itu rahasia dari
+    // peneliti, jadi disimpan di tabelnya sendiri (rspi.kepk_dokumen_telaah) yang
+    // tidak punya route unduh untuk peneliti — bukan disaring lewat if.
 
     public function label(): string
     {
@@ -46,7 +48,6 @@ enum DocumentType: string
             self::IzinFinal => 'Surat Izin Penelitian (Final)',
             self::SuratPenolakan => 'Surat Penolakan',
             self::SuratTanggapan => 'Surat Tanggapan Revisi',
-            self::TanggapanReviewer => 'File Tanggapan Reviewer',
         };
     }
 
@@ -83,7 +84,7 @@ enum DocumentType: string
     {
         return in_array($this, [
             self::IzinDraft, self::IzinFinal, self::SuratPenolakan,
-            self::SuratTanggapan, self::TanggapanReviewer,
+            self::SuratTanggapan,
         ], true);
     }
 }

@@ -5,11 +5,12 @@ namespace App\Services;
 use App\Enums\DocumentType;
 use App\Enums\ProposalStatus;
 use App\Enums\Unit;
+use App\Models\DokumenTelaah;
+use App\Models\PenugasanReviewer;
 use App\Models\Proposal;
 use App\Models\ProposalDocument;
-use App\Models\ProposalReview;
-use App\Models\ProposalReviewerAssignment;
 use App\Models\ProposalStatusHistory;
+use App\Models\TelaahReviewer;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,9 @@ use Illuminate\Support\Facades\DB;
  */
 class ProposalWorkflow
 {
+    /** Subfolder disk `dokumen` untuk berkas rahasia telaah reviewer. */
+    protected const FOLDER_TELAAH = 'tanggapan_reviewer';
+
     /**
      * Buat proposal baru dengan status awal Menunggu Verifikasi Berkas.
      */
@@ -59,11 +63,6 @@ class ProposalWorkflow
         return DB::transaction(function () use ($proposal, $dari, $ke, $catatan) {
             $proposal->status = $ke;
             $proposal->unit_sekarang = $ke->unit();
-
-            if ($ke === ProposalStatus::Selesai) {
-                $proposal->isi_survey_kepuasan = true;
-            }
-
             $proposal->save();
 
             $this->catatHistory($proposal, $dari, $ke, $catatan);
@@ -94,6 +93,29 @@ class ProposalWorkflow
     }
 
     /**
+     * Simpan file tanggapan reviewer ke tabel terpisah.
+     *
+     * Sengaja BUKAN lewat simpanDokumen(): berkas ini rahasia dari peneliti, dan
+     * menaruhnya di proposal_documents membuat kerahasiaannya bergantung pada
+     * penyaringan yang harus diingat di setiap query baru.
+     */
+    public function simpanDokumenTelaah(Proposal $proposal, UploadedFile $file, ?TelaahReviewer $telaah = null): DokumenTelaah
+    {
+        $versi = (int) $proposal->dokumenTelaah()->max('versi') + 1;
+
+        $path = $file->store("proposal/{$proposal->id}/".self::FOLDER_TELAAH, 'dokumen');
+
+        return DokumenTelaah::create([
+            'proposal_id' => $proposal->id,
+            'telaah_id' => $telaah?->id,
+            'path' => $path,
+            'nama_asli' => $file->getClientOriginalName(),
+            'versi' => $versi,
+            'uploaded_by' => Auth::id(),
+        ]);
+    }
+
+    /**
      * KEPK menunjuk >=1 reviewer → proposal masuk antrian reviewer.
      *
      * @param  string[]  $reviewerIds
@@ -105,9 +127,9 @@ class ProposalWorkflow
 
         DB::transaction(function () use ($proposal, $reviewerIds, $catatan) {
             foreach ($reviewerIds as $id) {
-                $a = ProposalReviewerAssignment::withTrashed()
+                $a = PenugasanReviewer::withTrashed()
                     ->firstOrNew(['proposal_id' => $proposal->id, 'reviewer_id' => $id]);
-                $a->status = ProposalReviewerAssignment::MENUNGGU;
+                $a->status = PenugasanReviewer::MENUNGGU;
                 $a->deleted_at = null;
                 $a->save();
             }
@@ -127,20 +149,19 @@ class ProposalWorkflow
         abort_unless($proposal->status === ProposalStatus::MenungguReviewReviewer, 403, 'Proposal tidak sedang direview');
         abort_unless(in_array($keputusan, ['approve', 'revise'], true), 422);
 
-        $assignment = $proposal->reviewerAssignments()
+        $assignment = $proposal->penugasanReviewer()
             ->where('reviewer_id', Auth::id())
             ->first();
 
         abort_unless($assignment, 403, 'Anda tidak ditugaskan pada proposal ini');
 
         DB::transaction(function () use ($proposal, $assignment, $keputusan, $komentar, $fileTanggapan) {
-            $ronde = (int) $proposal->reviews()
+            $ronde = (int) $proposal->telaahReviewer()
                 ->where('reviewer_id', Auth::id())
                 ->max('ronde') + 1;
 
-            ProposalReview::create([
+            $telaah = TelaahReviewer::create([
                 'proposal_id' => $proposal->id,
-                'tahap' => 2,
                 'unit' => Unit::Reviewer->value,
                 'reviewer_id' => Auth::id(),
                 'keputusan' => $keputusan,
@@ -149,13 +170,13 @@ class ProposalWorkflow
             ]);
 
             if ($fileTanggapan) {
-                $this->simpanDokumen($proposal, DocumentType::TanggapanReviewer, $fileTanggapan);
+                $this->simpanDokumenTelaah($proposal, $fileTanggapan, $telaah);
             }
 
             $assignment->update([
                 'status' => $keputusan === 'approve'
-                    ? ProposalReviewerAssignment::ACC
-                    : ProposalReviewerAssignment::REVISI,
+                    ? PenugasanReviewer::ACC
+                    : PenugasanReviewer::REVISI,
             ]);
 
             if ($keputusan === 'approve' && $proposal->semuaReviewerAcc()) {
@@ -167,7 +188,7 @@ class ProposalWorkflow
     /** Peneliti kirim revisi etik → semua penugasan kembali "menunggu" (ronde baru). */
     public function resetPenugasanReviewer(Proposal $proposal): void
     {
-        $proposal->reviewerAssignments()->update(['status' => ProposalReviewerAssignment::MENUNGGU]);
+        $proposal->penugasanReviewer()->update(['status' => PenugasanReviewer::MENUNGGU]);
     }
 
     /**

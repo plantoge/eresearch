@@ -10,7 +10,7 @@ class MasterPertanyaan extends Model
 {
     use HasUuidAndAudit, SoftDeletes;
 
-    protected $table = 'master_pertanyaan';
+    protected $table = 'rspi.master_pertanyaan';
 
     public $incrementing = false;
 

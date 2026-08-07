@@ -76,6 +76,27 @@ class SurveyGateTest extends TestCase
         $this->get(route('dokumen.download', $doc))->assertOk();
     }
 
+    /**
+     * Gate mengikuti keberadaan baris respon, bukan penanda yang ikut status.
+     * Dulu kolom boolean `isi_survey_kepuasan` tetap true di sini sehingga izin
+     * final tetap terbuka padahal surveinya sudah tidak ada.
+     */
+    public function test_izin_final_terkunci_lagi_bila_survey_dihapus(): void
+    {
+        [$p, $doc] = $this->proposalDenganIzinFinal($this->peneliti);
+
+        $respon = Respon::create([
+            'proposal_id' => $p->id,
+            'responden_id' => $this->peneliti->id,
+        ]);
+
+        $this->get(route('dokumen.download', $doc))->assertOk();
+
+        $respon->delete();
+
+        $this->get(route('dokumen.download', $doc))->assertForbidden();
+    }
+
     public function test_survey_proposal_a_tidak_membuka_proposal_b(): void
     {
         [$pA, $docA] = $this->proposalDenganIzinFinal($this->peneliti);

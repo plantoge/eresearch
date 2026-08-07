@@ -9,7 +9,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('master_aspek', function (Blueprint $t) {
+        Schema::create('rspi.master_aspek', function (Blueprint $t) {
             $t->uuid('id')->primary();
             $t->string('nama_aspek');
             $t->string('deskripsi')->nullable();
@@ -20,7 +20,7 @@ return new class extends Migration
             $t->auditColumns();
         });
 
-        Schema::create('master_pertanyaan', function (Blueprint $t) {
+        Schema::create('rspi.master_pertanyaan', function (Blueprint $t) {
             $t->uuid('id')->primary();
             $t->uuid('master_aspek_id');
             $t->text('pertanyaan');
@@ -34,7 +34,7 @@ return new class extends Migration
             $t->index('master_aspek_id');
         });
 
-        Schema::create('master_skala', function (Blueprint $t) {
+        Schema::create('rspi.master_skala', function (Blueprint $t) {
             $t->uuid('id')->primary();
             $t->string('nama_skala');
             $t->integer('nilai');
@@ -44,7 +44,7 @@ return new class extends Migration
             $t->auditColumns();
         });
 
-        Schema::create('respon', function (Blueprint $t) {
+        Schema::create('rspi.respon', function (Blueprint $t) {
             $t->uuid('id')->primary();
             $t->uuid('proposal_id');                 // D5: gate survey per proposal
             $t->uuid('responden_id');
@@ -59,9 +59,9 @@ return new class extends Migration
         });
 
         // Satu survey aktif per proposal — partial unique agar baris soft-deleted tak menghalangi
-        DB::statement('create unique index respon_proposal_id_unique on respon (proposal_id) where deleted_at is null');
+        DB::statement('create unique index respon_proposal_id_unique on rspi.respon (proposal_id) where deleted_at is null');
 
-        Schema::create('jawaban', function (Blueprint $t) {
+        Schema::create('rspi.jawaban', function (Blueprint $t) {
             $t->uuid('id')->primary();
             $t->uuid('respon_id');
             $t->uuid('master_pertanyaan_id');
@@ -78,10 +78,10 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('jawaban');
-        Schema::dropIfExists('respon');
-        Schema::dropIfExists('master_skala');
-        Schema::dropIfExists('master_pertanyaan');
-        Schema::dropIfExists('master_aspek');
+        Schema::dropIfExists('rspi.jawaban');
+        Schema::dropIfExists('rspi.respon');
+        Schema::dropIfExists('rspi.master_skala');
+        Schema::dropIfExists('rspi.master_pertanyaan');
+        Schema::dropIfExists('rspi.master_aspek');
     }
 };

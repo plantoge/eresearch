@@ -10,7 +10,7 @@ class MasterAspek extends Model
 {
     use HasUuidAndAudit, SoftDeletes;
 
-    protected $table = 'master_aspek';
+    protected $table = 'rspi.master_aspek';
 
     public $incrementing = false;
 

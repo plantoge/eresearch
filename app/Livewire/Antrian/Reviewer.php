@@ -23,7 +23,7 @@ class Reviewer extends BaseAntrian
     {
         return Proposal::query()
             ->where('status', ProposalStatus::MenungguReviewReviewer->value)
-            ->whereHas('reviewerAssignments', fn ($q) => $q
+            ->whereHas('penugasanReviewer', fn ($q) => $q
                 ->where('reviewer_id', auth()->id())
                 ->where('status', 'menunggu'));
     }
@@ -32,7 +32,7 @@ class Reviewer extends BaseAntrian
     protected function riwayatQuery()
     {
         return Proposal::query()
-            ->whereHas('reviewerAssignments', fn ($q) => $q
+            ->whereHas('penugasanReviewer', fn ($q) => $q
                 ->where('reviewer_id', auth()->id()));
     }
 }

@@ -6,9 +6,13 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Kernel proposal: identitas pengajuan + status. Data kerja tiap unit ada di
+     * tabel cru_* / kepk_* masing-masing, bukan sebagai kolom di sini.
+     */
     public function up(): void
     {
-        Schema::create('proposal', function (Blueprint $t) {
+        Schema::create('rspi.proposal', function (Blueprint $t) {
             $t->uuid('id')->primary();
             $t->unsignedSmallInteger('tahun');            // D6: nomor increment per tahun
             $t->unsignedBigInteger('nomor');
@@ -22,10 +26,6 @@ return new class extends Migration
             $t->uuid('user_id');                          // relasi users (FK menyusul)
             $t->string('status');                         // cast enum ProposalStatus
             $t->string('unit_sekarang')->nullable();      // D2: turunan status, materialized
-            $t->timestamp('tanggal_presentasi')->nullable();
-            $t->string('kategori_presentasi')->nullable();
-            $t->string('media_presentasi')->nullable();
-            $t->boolean('isi_survey_kepuasan')->default(false);
             $t->timestamps();
             $t->softDeletes();
             $t->auditColumns();
@@ -39,6 +39,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('proposal');
+        Schema::dropIfExists('rspi.proposal');
     }
 };

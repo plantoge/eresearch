@@ -10,7 +10,7 @@ class MasterSkala extends Model
 {
     use HasUuidAndAudit, SoftDeletes;
 
-    protected $table = 'master_skala';
+    protected $table = 'rspi.master_skala';
 
     public $incrementing = false;
 

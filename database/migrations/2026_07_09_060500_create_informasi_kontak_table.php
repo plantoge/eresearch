@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('informasi_kontak', function (Blueprint $t) {
+        Schema::create('rspi.informasi_kontak', function (Blueprint $t) {
             $t->uuid('id')->primary();
             // Kontak
             $t->string('telepon')->nullable();
@@ -46,6 +46,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('informasi_kontak');
+        Schema::dropIfExists('rspi.informasi_kontak');
     }
 };

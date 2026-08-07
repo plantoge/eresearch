@@ -6,9 +6,13 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Jejak audit sengaja TIDAK dipecah per unit: satu proposal melintasi CRU dan
+     * KEPK, dan riwayat yang terpotong justru merusak hal yang mau dilindungi.
+     */
     public function up(): void
     {
-        Schema::create('proposal_status_history', function (Blueprint $t) {
+        Schema::create('rspi.proposal_status_history', function (Blueprint $t) {
             $t->uuid('id')->primary();
             $t->uuid('proposal_id');
             $t->string('from_status')->nullable();
@@ -26,6 +30,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('proposal_status_history');
+        Schema::dropIfExists('rspi.proposal_status_history');
     }
 };

@@ -13,7 +13,8 @@ use Illuminate\Support\Str;
  *
  * Beda dari ProposalSampleSeeder yang sengaja menjalankan alur asli lewat
  * ProposalWorkflow (puluhan write per proposal — realistis tapi lambat):
- * seeder ini menulis baris `proposal` langsung, tanpa history/dokumen/penugasan.
+ * seeder ini menulis baris `rspi.proposal` langsung, tanpa history/dokumen/penugasan
+ * dan tanpa berkas kerja CRU/KEPK.
  * Tujuannya semata mengisi tabel sampai volume besar untuk uji beban query.
  *
  * Konsekuensi yang harus disadari saat membaca hasil benchmark:
@@ -78,7 +79,7 @@ class ProposalBulkSeeder extends Seeder
 
         // Lanjut dari nomor terakhir supaya unique(tahun, nomor) & unique(kode)
         // tidak bentrok dengan data yang sudah ada (mis. ProposalSampleSeeder).
-        $nomor = (int) DB::table('proposal')->where('tahun', $tahun)->max('nomor');
+        $nomor = (int) DB::table('rspi.proposal')->where('tahun', $tahun)->max('nomor');
 
         $pool = $this->poolStatus();
         $jumlahPool = count($pool);
@@ -112,10 +113,6 @@ class ProposalBulkSeeder extends Seeder
                     'user_id' => $peneliti->id,
                     'status' => $status->value,
                     'unit_sekarang' => $status->unit()?->value,
-                    'tanggal_presentasi' => null,
-                    'kategori_presentasi' => null,
-                    'media_presentasi' => null,
-                    'isi_survey_kepuasan' => false,
                     'created_at' => $dibuat,
                     'updated_at' => $dibuat->copy()->addHours(random_int(1, 72)),
                     'deleted_at' => null,
@@ -126,7 +123,7 @@ class ProposalBulkSeeder extends Seeder
             }
 
             foreach (array_chunk($baris, $this->maksBarisPerInsert($baris[0])) as $bagian) {
-                DB::table('proposal')->insert($bagian);
+                DB::table('rspi.proposal')->insert($bagian);
             }
 
             $ditulis += $batas;

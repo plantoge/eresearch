@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\DocumentDownloadController;
+use App\Http\Controllers\DokumenTelaahDownloadController;
 use App\Livewire;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -74,4 +75,8 @@ Route::middleware(['auth', 'verified.optional'])->group(function () {
 
     // Unduhan dokumen ber-gate (survey gate untuk izin_final di controller)
     Route::get('/dokumen/{document}', DocumentDownloadController::class)->name('dokumen.download');
+
+    // Berkas telaah reviewer — route terpisah, tanpa jalur untuk peneliti
+    Route::get('/dokumen-telaah/{dokumen}', DokumenTelaahDownloadController::class)
+        ->name('dokumen-telaah.download');
 });

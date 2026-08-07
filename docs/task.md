@@ -6,19 +6,35 @@
 > Semua tambahan pekerjaan, temuan, dan ide fitur ditulis **di sini** — bukan sebagai file
 > docs baru (lihat [rules.md §1](rules.md#1-dokumentasi)).
 >
-> Terakhir diselaraskan dengan kode: **28 Juli 2026**.
+> Terakhir diselaraskan dengan kode: **7 Agustus 2026**.
 
 ---
 
 ## 1. Kondisi Sekarang
 
-Aplikasi berjalan penuh untuk alur 4 tahap. Verifikasi terakhir: **`artisan test` → 40 lulus,
-78 assertion** (sqlite in-memory, tidak menyentuh DB nyata).
+Aplikasi berjalan penuh untuk alur 4 tahap.
+
+**Struktur database sudah dipisah per kelompok CRU & KEPK** (schema `rspi`, 5 tabel baru,
+2 tabel di-rename). Verifikasi terakhir: **`artisan test` → 53 lulus, 121 assertion**, berjalan
+di PostgreSQL (`cru_test`) — bukan lagi sqlite in-memory.
+
+**DB kerja `cru` sudah di-migrate** (`migrate:fresh --seed`, 7 Agustus 2026) dan diverifikasi
+read-only: 14 tabel di `public`, 17 di `rspi`, 7 partial unique index, dan keempat kolom yang
+dibuang memang sudah tidak ada di `rspi.proposal`. Isi seeder pulih utuh — 10 user, 9 role,
+48 permission, 12 menu, master survey 3/6/5.
+
+Cadangan struktur & data lama sebelum migrasi: `C:\Users\arsip\cru-backup-2026-08-07.sql`
+(49,9 KB, `pg_dump`). Boleh dihapus kalau sudah yakin.
+
+`SemuaHalamanRenderTest` menutup lubang lama: Dashboard, Laporan, Audit Log, Antrian, dan
+daftar Proposal sebelumnya **tidak punya tes sama sekali**, padahal pemisahan ini menyentuh
+hampir semua model. Sekarang ke-14 halaman dirender, plus halaman proposal di ke-12 status.
 
 | Bagian | Status |
 |---|---|
 | Fondasi: Laravel 12, Livewire 3, Mary UI + daisyUI, spatie/permission, UUIDv7 + audit columns | ✅ |
-| Domain inti: 3 enum, 12 migration, `ProposalWorkflow` sebagai pintu tunggal transisi | ✅ |
+| Domain inti: 7 enum, 14 migration, `ProposalWorkflow` sebagai pintu tunggal transisi | ✅ |
+| Pemisahan struktur CRU & KEPK (schema `rspi`, berkas kerja per unit) | ✅ kode + tes lulus; ⏳ DB kerja `cru` belum di-migrate |
 | RBAC & menu dinamis: 9 role, 12 menu, 48 permission, sinkronisasi menu→permission otomatis | ✅ |
 | Auth: login, registrasi, lupa/reset password, math captcha, layout + sidebar dinamis | ✅ |
 | Tahap 1 (CRU): revisi, presentasi, tolak, loloskan | ✅ |
@@ -47,6 +63,30 @@ mengerjakan tanpa menebak:
 ---
 
 ## 3. Belum Dikerjakan
+
+### Buang spec kerja pemisahan CRU/KEPK
+**Kenapa:** `.claude/specs/2026-08-07-pemisahan-cru-kepk.md` adalah spec sementara; strukturnya
+sudah terpasang dan `docs/skema.md` sudah menggambarkannya sebagai kondisi terpasang. Dibiarkan
+hidup, ia akan jadi dokumen basi — persis alasan `rules.md §1` membatasi docs jadi enam file.
+**Kondisi selesai:** file itu dihapus, dan tidak ada lagi yang menunjuk ke sana.
+**Catatan:** ditahan dulu karena berkasnya **belum masuk git** — menghapusnya sekarang berarti
+hilang permanen, termasuk 8 keputusan terkunci dan alasannya. Buang setelah pekerjaan ini
+di-commit, atau kalau isinya sudah tidak diperlukan.
+
+### Isi berkas kerja CRU/KEPK dari halaman KEPK yang sebenarnya
+**Kenapa:** `kepk_protokol_etik` sekarang diisi dari panel Penunjukan Reviewer di halaman
+proposal — cukup untuk nomor protokol, jenis telaah, dan tanggal sidang, tapi KEPK belum punya
+halamannya sendiri untuk mengelola protokol lintas proposal.
+**Kondisi selesai:** KEPK bisa melihat & mengelola protokol etik sebagai daftar, bukan hanya
+per proposal.
+**Catatan:** `jenis_telaah` saat ini **tidak menggerakkan alur apa pun** — tidak ada percabangan
+yang membacanya. Kalau di RSPI `exempted` berarti tanpa reviewer, itu butuh perubahan di
+`ProposalWorkflow::tugaskanReviewer()` (sekarang wajib ≥1 reviewer) dan mungkin
+`ProposalStatus::allowedNext()`. Keduanya sengaja tidak disentuh saat pemisahan struktur.
+
+Yang **tidak** disentuh sama sekali: `ProposalStatus`, `Unit`, dan
+`ProposalWorkflow::transition()`. Kalau suatu saat ketiganya ikut berubah, berarti ada yang
+melenceng dari kesepakatan.
 
 ### Export laporan ke Excel
 **Kenapa:** Direksi/CRU/Auditor butuh rekap yang bisa diolah di luar aplikasi; halaman Laporan
@@ -100,14 +140,24 @@ Rekam Medis memprosesnya, seluruh aktivitas tercatat di audit trail.
 terverifikasi otomatis.
 **Catatan:** ditunda sampai alur manual dikonfirmasi benar oleh pengguna.
 
-### Data uji volume besar di database
-**Kenapa:** tabel `proposal` di `eprotocol` berisi **1.201.076 baris** (±553 MB) sisa
-`ProposalBulkSeeder` untuk benchmark; data ini tanpa dokumen/history sehingga membuat tampilan
-daftar terlihat penuh oleh data palsu.
-**Kondisi selesai:** ada keputusan pemilik sistem — dipertahankan untuk uji performa, atau
-dibersihkan sebelum dipakai sungguhan.
-**Catatan:** pembersihan adalah operasi tulis — **harus dijalankan pemilik sistem**, bukan
-diam-diam (lihat [rules.md §5](rules.md#5-database)).
+### ~~Data uji volume besar di database~~ — tidak berlaku di mesin dev ini
+**Temuan 7 Agustus 2026:** entri lama menyebut 1.201.076 baris di DB `eprotocol`. Diperiksa
+read-only: **`eprotocol` tidak ada di PostgreSQL lokal.** Yang ada adalah DB **`cru`** (sesuai
+`.env`) dengan 25 tabel di schema `public` dan **`public.proposal` berisi 0 baris**.
+**Kondisi selesai:** kalau data 1,2 juta baris itu memang ada di server lain, pemilik sistem
+memutuskan sendiri nasibnya di sana. Di mesin dev tidak ada yang perlu dibersihkan.
+**Catatan:** `ProposalBulkSeeder` tetap ada untuk membangkitkan ulang bila benchmark
+diperlukan (`BULK_PROPOSAL_COUNT=1000000`).
+
+### Selaraskan nama database di dokumen dengan kenyataan
+**Kenapa:** `arsitektur.md`, `skema.md`, dan `rules.md` menyebut DB `eprotocol`, sementara
+`.env` di mesin dev menunjuk `cru`. Sesi berikutnya bisa tertipu dan mencari database yang
+tidak ada. `.env` lokal juga tidak punya `DOCUMENTS_PATH` maupun `EMAIL_VERIFICATION_REQUIRED`,
+dan `MAIL_MAILER=log` — jadi deskripsi lingkungan di docs menggambarkan server, bukan mesin ini.
+**Kondisi selesai:** dokumen menyebut nama DB per lingkungan dengan jelas (dev vs server), atau
+berhenti menyebut nama sama sekali dan menunjuk `.env`.
+**Catatan:** `rules.md §5` sudah diberi peringatan sementara; sisanya perlu keputusan pemilik
+sistem soal mana yang benar.
 
 ---
 

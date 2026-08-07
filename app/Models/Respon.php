@@ -10,7 +10,7 @@ class Respon extends Model
 {
     use HasUuidAndAudit, SoftDeletes;
 
-    protected $table = 'respon';
+    protected $table = 'rspi.respon';
 
     public $incrementing = false;
 

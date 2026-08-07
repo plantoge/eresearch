@@ -10,7 +10,7 @@ class Jawaban extends Model
 {
     use HasUuidAndAudit, SoftDeletes;
 
-    protected $table = 'jawaban';
+    protected $table = 'rspi.jawaban';
 
     public $incrementing = false;
 

@@ -11,6 +11,8 @@ class ProposalDocument extends Model
 {
     use HasUuidAndAudit, SoftDeletes;
 
+    protected $table = 'rspi.proposal_documents';
+
     public $incrementing = false;
 
     protected $keyType = 'string';

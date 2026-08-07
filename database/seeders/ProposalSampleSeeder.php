@@ -135,7 +135,7 @@ class ProposalSampleSeeder extends Seeder
 
         // Sebar waktu supaya urutan antrian/riwayat terlihat alami
         $dibuat = now()->subDays(rand(1, 90))->subMinutes(rand(0, 1440));
-        DB::table('proposal')->where('id', $p->id)->update([
+        DB::table('rspi.proposal')->where('id', $p->id)->update([
             'created_at' => $dibuat,
             'updated_at' => $dibuat->copy()->addHours(rand(1, 72)),
         ]);

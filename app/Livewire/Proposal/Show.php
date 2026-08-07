@@ -3,14 +3,23 @@
 namespace App\Livewire\Proposal;
 
 use App\Enums\DocumentType;
+use App\Enums\JenisTelaah;
+use App\Enums\KeputusanEtik;
 use App\Enums\ProposalStatus;
+use App\Enums\StatusPembayaran;
+use App\Enums\TujuanPembayaran;
 use App\Enums\Unit;
+use App\Models\BerkasPenelitian;
+use App\Models\DokumenTelaah;
 use App\Models\InformasiKontak;
+use App\Models\IzinPenelitian;
 use App\Models\MasterAspek;
 use App\Models\MasterSkala;
 use App\Models\Proposal;
-use App\Models\ProposalReview;
+use App\Models\ProposalDocument;
 use App\Models\Respon;
+use App\Models\TelaahReviewer;
+use App\Models\User;
 use App\Services\ProposalWorkflow;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -24,12 +33,21 @@ class Show extends Component
 
     public string $catatan = '';
 
-    // Presentasi (CRU)
+    // Presentasi (CRU) — disimpan di berkas kerja CRU, bukan di tabel proposal
     public string $tanggal_presentasi = '';
 
     public string $kategori_presentasi = '';
 
     public string $media_presentasi = '';
+
+    // Protokol etik (KEPK) — penomoran & telaah milik KEPK sendiri
+    public string $nomor_protokol = '';
+
+    public string $jenis_telaah = '';
+
+    public string $tanggal_sidang = '';
+
+    public string $nomor_ec = '';
 
     // Upload generik per aksi
     public $fileUpload;          // satu file (surat tanggapan/penolakan/izin/bukti bayar/revisi proposal)
@@ -60,11 +78,26 @@ class Show extends Component
             $proposal->user_id === $user->id
                 || $user->canAny(['antrian-cru.read', 'kaji-etik.read'])
                 || ($user->can('antrian-reviewer.read')
-                    && $proposal->reviewerAssignments()->where('reviewer_id', $user->id)->exists()),
+                    && $proposal->penugasanReviewer()->where('reviewer_id', $user->id)->exists()),
             403,
         );
 
         $this->proposal = $proposal;
+
+        // Prefill dari berkas kerja masing-masing unit supaya form menampilkan
+        // nilai yang sudah tersimpan, bukan kosong.
+        if ($berkas = $proposal->berkasPenelitian) {
+            $this->tanggal_presentasi = $berkas->tanggal_presentasi?->format('Y-m-d\TH:i') ?? '';
+            $this->kategori_presentasi = $berkas->kategori_presentasi ?? '';
+            $this->media_presentasi = $berkas->media_presentasi ?? '';
+        }
+
+        if ($protokol = $proposal->protokolEtik) {
+            $this->nomor_protokol = $protokol->nomor_protokol ?? '';
+            $this->jenis_telaah = $protokol->jenis_telaah?->value ?? '';
+            $this->tanggal_sidang = $protokol->tanggal_sidang?->format('Y-m-d\TH:i') ?? '';
+            $this->nomor_ec = $protokol->nomor_ec ?? '';
+        }
     }
 
     protected function pemilik(): bool
@@ -80,9 +113,9 @@ class Show extends Component
         $this->success("Status: {$ke->value}");
     }
 
-    protected function simpanFile(DocumentType $jenis, $file): void
+    protected function simpanFile(DocumentType $jenis, $file): ProposalDocument
     {
-        app(ProposalWorkflow::class)->simpanDokumen($this->proposal, $jenis, $file);
+        return app(ProposalWorkflow::class)->simpanDokumen($this->proposal, $jenis, $file);
     }
 
     // ============ Aksi Peneliti ============
@@ -91,7 +124,7 @@ class Show extends Component
     public function kirimRevisi()
     {
         abort_unless($this->pemilik(), 403);
-        $this->validate(['fileUpload' => 'required|' . DocumentType::Proposal->aturanValidasi()]);
+        $this->validate(['fileUpload' => 'required|'.DocumentType::Proposal->aturanValidasi()]);
 
         $this->simpanFile(DocumentType::Proposal, $this->fileUpload);
         $this->pindah(ProposalStatus::MenungguVerifikasiRevisi, $this->catatan);
@@ -104,13 +137,17 @@ class Show extends Component
 
         $rules = [];
         foreach (DocumentType::wajibTahap2() as $jenis) {
-            $rules["fileEtik.{$jenis->value}"] = 'required|' . $jenis->aturanValidasi();
+            $rules["fileEtik.{$jenis->value}"] = 'required|'.$jenis->aturanValidasi();
         }
         $this->validate($rules);
 
         foreach (DocumentType::wajibTahap2() as $jenis) {
             $this->simpanFile($jenis, $this->fileEtik[$jenis->value]);
         }
+
+        // Berkas etik masuk → KEPK punya sesuatu untuk dikerjakan, jadi berkas
+        // kerjanya dibuat di sini (bukan saat pengajuan, saat KEPK belum terlibat).
+        $this->proposal->protokolEtik()->firstOrCreate([]);
 
         $this->pindah(ProposalStatus::MenungguPenunjukanReviewer, $this->catatan);
     }
@@ -145,12 +182,32 @@ class Show extends Component
     {
         abort_unless($this->pemilik(), 403);
         $this->validate([
-            'fileBayarCru' => 'required|' . DocumentType::BuktiBayarCru->aturanValidasi(),
-            'fileBayarKepk' => 'required|' . DocumentType::BuktiBayarKepk->aturanValidasi(),
+            'fileBayarCru' => 'required|'.DocumentType::BuktiBayarCru->aturanValidasi(),
+            'fileBayarKepk' => 'required|'.DocumentType::BuktiBayarKepk->aturanValidasi(),
         ]);
 
-        $this->simpanFile(DocumentType::BuktiBayarCru, $this->fileBayarCru);
-        $this->simpanFile(DocumentType::BuktiBayarKepk, $this->fileBayarKepk);
+        $file = [
+            TujuanPembayaran::Cru->value => $this->fileBayarCru,
+            TujuanPembayaran::Kepk->value => $this->fileBayarKepk,
+        ];
+
+        foreach (TujuanPembayaran::cases() as $tujuan) {
+            $dokumen = $this->simpanFile($tujuan->jenisDokumen(), $file[$tujuan->value]);
+
+            // Kirim ulang setelah ditolak memakai baris yang sama (partial unique
+            // per proposal+tujuan) — riwayat buktinya ada di versi dokumen.
+            $this->proposal->pembayaran()->updateOrCreate(
+                ['tujuan' => $tujuan->value],
+                [
+                    'status' => StatusPembayaran::Menunggu->value,
+                    'dokumen_id' => $dokumen->id,
+                    'diverifikasi_oleh' => null,
+                    'diverifikasi_pada' => null,
+                    'catatan' => null,
+                ],
+            );
+        }
+
         $this->pindah(ProposalStatus::MenungguVerifikasiPembayaran);
     }
 
@@ -159,8 +216,8 @@ class Show extends Component
     {
         abort_unless($this->pemilik(), 403);
         $this->validate([
-            'fileLaporan' => 'required|' . DocumentType::LaporanPenelitian->aturanValidasi(),
-            'fileRawData' => 'required|' . DocumentType::RawData->aturanValidasi(),
+            'fileLaporan' => 'required|'.DocumentType::LaporanPenelitian->aturanValidasi(),
+            'fileRawData' => 'required|'.DocumentType::RawData->aturanValidasi(),
         ]);
 
         $this->simpanFile(DocumentType::LaporanPenelitian, $this->fileLaporan);
@@ -221,6 +278,7 @@ class Show extends Component
             $this->simpanFile(DocumentType::SuratTanggapan, $this->fileUpload);
         }
 
+        $this->catatVerifikasiCru();
         $this->pindah(ProposalStatus::PerluRevisiProposal, $this->catatan);
     }
 
@@ -233,11 +291,11 @@ class Show extends Component
             'media_presentasi' => 'required|string',
         ]);
 
-        $this->proposal->fill([
+        $this->berkasCru()->update([
             'tanggal_presentasi' => $this->tanggal_presentasi,
             'kategori_presentasi' => $this->kategori_presentasi,
             'media_presentasi' => $this->media_presentasi,
-        ])->save();
+        ]);
 
         $this->pindah(ProposalStatus::MenungguPresentasi, $this->catatan);
     }
@@ -245,15 +303,17 @@ class Show extends Component
     public function tolak()
     {
         abort_unless(auth()->user()->can('antrian-cru.update'), 403);
-        $this->validate(['fileUpload' => 'required|' . DocumentType::SuratPenolakan->aturanValidasi()]);
+        $this->validate(['fileUpload' => 'required|'.DocumentType::SuratPenolakan->aturanValidasi()]);
 
         $this->simpanFile(DocumentType::SuratPenolakan, $this->fileUpload);
+        $this->catatVerifikasiCru();
         $this->pindah(ProposalStatus::Ditolak, $this->catatan);
     }
 
     public function loloskan()
     {
         abort_unless(auth()->user()->can('antrian-cru.update'), 403);
+        $this->catatVerifikasiCru();
         $this->pindah(ProposalStatus::MenungguKelengkapanBerkasEtik, $this->catatan ?: 'Lolos ke KEPK');
     }
 
@@ -261,9 +321,22 @@ class Show extends Component
     public function terbitkanDraftIzin()
     {
         abort_unless(auth()->user()->can('antrian-cru.update'), 403);
-        $this->validate(['fileUpload' => 'required|' . DocumentType::IzinDraft->aturanValidasi()]);
+        $this->validate(['fileUpload' => 'required|'.DocumentType::IzinDraft->aturanValidasi()]);
 
         $this->simpanFile(DocumentType::IzinDraft, $this->fileUpload);
+
+        $this->proposal->pembayaran()->update([
+            'status' => StatusPembayaran::Terverifikasi->value,
+            'diverifikasi_oleh' => auth()->id(),
+            'diverifikasi_pada' => now(),
+            'catatan' => null,
+        ]);
+
+        $this->izinCru()->update([
+            'tanggal_terbit_draft' => now(),
+            'diterbitkan_oleh' => auth()->id(),
+        ]);
+
         $this->pindah(ProposalStatus::PelaksanaanPenelitian, $this->catatan);
     }
 
@@ -271,6 +344,14 @@ class Show extends Component
     public function tolakBuktiBayar()
     {
         abort_unless(auth()->user()->can('antrian-cru.update'), 403);
+
+        $this->proposal->pembayaran()->update([
+            'status' => StatusPembayaran::Ditolak->value,
+            'diverifikasi_oleh' => auth()->id(),
+            'diverifikasi_pada' => now(),
+            'catatan' => $this->catatan ?: 'Bukti pembayaran ditolak',
+        ]);
+
         $this->pindah(ProposalStatus::MenungguPembayaran, $this->catatan ?: 'Bukti pembayaran ditolak');
     }
 
@@ -278,9 +359,15 @@ class Show extends Component
     public function terbitkanIzinFinal()
     {
         abort_unless(auth()->user()->can('antrian-cru.update'), 403);
-        $this->validate(['fileUpload' => 'required|' . DocumentType::IzinFinal->aturanValidasi()]);
+        $this->validate(['fileUpload' => 'required|'.DocumentType::IzinFinal->aturanValidasi()]);
 
         $this->simpanFile(DocumentType::IzinFinal, $this->fileUpload);
+
+        $this->izinCru()->update([
+            'tanggal_terbit_final' => now(),
+            'diterbitkan_oleh' => auth()->id(),
+        ]);
+
         $this->pindah(ProposalStatus::MenungguSurveyKepuasan, $this->catatan);
     }
 
@@ -305,7 +392,7 @@ class Show extends Component
         $this->validate(['catatan' => 'required|string'], [], ['catatan' => 'komentar']);
 
         if ($this->fileUpload) {
-            $this->validate(['fileUpload' => DocumentType::TanggapanReviewer->aturanValidasi()]);
+            $this->validate(['fileUpload' => DokumenTelaah::ATURAN_VALIDASI]);
         }
 
         app(ProposalWorkflow::class)->reviewerMerespons($this->proposal, 'revise', $this->catatan, $this->fileUpload);
@@ -319,7 +406,7 @@ class Show extends Component
         abort_unless(auth()->user()->can('antrian-reviewer.update'), 403);
 
         if ($this->fileUpload) {
-            $this->validate(['fileUpload' => DocumentType::TanggapanReviewer->aturanValidasi()]);
+            $this->validate(['fileUpload' => DokumenTelaah::ATURAN_VALIDASI]);
         }
 
         app(ProposalWorkflow::class)->reviewerMerespons($this->proposal, 'approve', $this->catatan, $this->fileUpload);
@@ -336,6 +423,8 @@ class Show extends Component
         abort_unless(auth()->user()->can('kaji-etik.update'), 403);
         $this->validate(['reviewerTerpilih' => 'required|array|min:1'], [], ['reviewerTerpilih' => 'reviewer']);
 
+        $this->simpanProtokolEtik();
+
         app(ProposalWorkflow::class)->tugaskanReviewer($this->proposal, $this->reviewerTerpilih, $this->catatan);
         $this->proposal->refresh();
         $this->reset('catatan', 'reviewerTerpilih');
@@ -351,7 +440,7 @@ class Show extends Component
     {
         abort_unless(auth()->user()->can('kaji-etik.update'), 403);
         abort_unless(
-            $this->proposal->reviewerAssignments()->where('status', 'revisi')->exists(),
+            $this->proposal->penugasanReviewer()->where('status', 'revisi')->exists(),
             403,
             'Belum ada reviewer yang meminta revisi',
         );
@@ -372,6 +461,12 @@ class Show extends Component
         abort_unless(auth()->user()->can('kaji-etik.update'), 403);
         abort_unless($this->proposal->semuaReviewerAcc(), 403, 'Belum semua reviewer memberikan ACC');
 
+        $this->simpanProtokolEtik([
+            'keputusan' => KeputusanEtik::Layak->value,
+            'nomor_ec' => $this->nomor_ec ?: null,
+            'tanggal_terbit_ec' => now(),
+        ]);
+
         $this->pindah(ProposalStatus::MenungguPembayaran, $this->catatan ?: 'Lanjut ke pembayaran');
     }
 
@@ -380,17 +475,51 @@ class Show extends Component
         abort_unless(auth()->user()->can('kaji-etik.update'), 403);
         $this->validate(['catatan' => 'required|string'], [], ['catatan' => 'alasan penolakan']);
 
-        ProposalReview::create([
+        TelaahReviewer::create([
             'proposal_id' => $this->proposal->id,
-            'tahap' => 2,
             'unit' => Unit::KajiEtik->value,
             'reviewer_id' => auth()->id(),
             'keputusan' => 'reject',
             'komentar' => $this->catatan,
-            'ronde' => (int) $this->proposal->reviews()->max('ronde') + 1,
+            'ronde' => (int) $this->proposal->telaahReviewer()->max('ronde') + 1,
         ]);
 
+        $this->simpanProtokolEtik(['keputusan' => KeputusanEtik::TidakLayak->value]);
+
         $this->pindah(ProposalStatus::DitolakKajiEtik, $this->catatan);
+    }
+
+    // ============ Berkas kerja per unit ============
+
+    /** Berkas kerja CRU, dibuat saat CRU pertama kali menyentuh proposal. */
+    protected function berkasCru(): BerkasPenelitian
+    {
+        return $this->proposal->berkasPenelitian()->firstOrCreate([]);
+    }
+
+    protected function izinCru(): IzinPenelitian
+    {
+        return $this->proposal->izinPenelitian()->firstOrCreate([]);
+    }
+
+    /** Jejak siapa memverifikasi berkas Tahap 1 dan kapan. */
+    protected function catatVerifikasiCru(): void
+    {
+        $this->berkasCru()->update([
+            'catatan_verifikasi' => $this->catatan ?: null,
+            'diverifikasi_oleh' => auth()->id(),
+            'diverifikasi_pada' => now(),
+        ]);
+    }
+
+    protected function simpanProtokolEtik(array $tambahan = []): void
+    {
+        $this->proposal->protokolEtik()->firstOrCreate([])->update([
+            'nomor_protokol' => $this->nomor_protokol ?: null,
+            'jenis_telaah' => $this->jenis_telaah ?: null,
+            'tanggal_sidang' => $this->tanggal_sidang ?: null,
+            ...$tambahan,
+        ]);
     }
 
     public function render()
@@ -402,28 +531,32 @@ class Show extends Component
         // KEPK yang meneruskan intinya lewat catatan status.
         $bolehLihatReview = $user->canAny(['antrian-cru.read', 'kaji-etik.read', 'antrian-reviewer.read']);
 
+        // Tidak perlu disaring lagi — berkas rahasia telaah tidak ada di tabel ini.
         $dokumen = $this->proposal->documents()
-            ->when(! $bolehLihatReview, fn($q) => $q->where('jenis', '!=', DocumentType::TanggapanReviewer->value))
             ->orderBy('jenis')->orderByDesc('versi')->get()->groupBy('jenis');
+
+        $dokumenTelaah = $bolehLihatReview
+            ? $this->proposal->dokumenTelaah()->orderByDesc('versi')->get()
+            : collect();
 
         $history = $this->proposal->statusHistory()->with('actor')->get();
 
         $reviews = $bolehLihatReview
-            ? $this->proposal->reviews()->with('reviewer')->latest('created_at')->get()
+            ? $this->proposal->telaahReviewer()->with('reviewer')->latest('created_at')->get()
             : collect();
 
-        $assignments = $this->proposal->reviewerAssignments()->with('reviewer')->get();
+        $assignments = $this->proposal->penugasanReviewer()->with('reviewer')->get();
 
         $reviewerOptions = $s === ProposalStatus::MenungguPenunjukanReviewer && $user->can('kaji-etik.update')
-            ? \App\Models\User::role('reviewer')->orderBy('name')->get(['id', 'name'])
+            ? User::role('reviewer')->orderBy('name')->get(['id', 'name'])
             : collect();
 
-        $penugasanSaya = $this->proposal->reviewerAssignments()
+        $penugasanSaya = $this->proposal->penugasanReviewer()
             ->where('reviewer_id', $user->id)->first();
 
         $aspekSurvey = $s === ProposalStatus::MenungguSurveyKepuasan && $this->pemilik()
             ? MasterAspek::where('status_aktif', true)->orderBy('urutan')
-            ->with(['pertanyaan' => fn($q) => $q->where('status_aktif', true)->orderBy('urutan')])->get()
+                ->with(['pertanyaan' => fn ($q) => $q->where('status_aktif', true)->orderBy('urutan')])->get()
             : collect();
 
         $skalaSurvey = MasterSkala::orderBy('urutan')->get();
@@ -435,6 +568,11 @@ class Show extends Component
 
         return view('livewire.proposal.show', [
             'dokumen' => $dokumen,
+            'dokumenTelaah' => $dokumenTelaah,
+            'berkasCru' => $this->proposal->berkasPenelitian,
+            'protokolEtik' => $this->proposal->protokolEtik,
+            'pembayaran' => $isCru || $isPemilik ? $this->proposal->pembayaran()->get() : collect(),
+            'opsiJenisTelaah' => JenisTelaah::cases(),
             'history' => $history,
             'reviews' => $reviews,
             'bolehLihatReview' => $bolehLihatReview,

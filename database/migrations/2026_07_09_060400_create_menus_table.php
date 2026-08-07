@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('menus', function (Blueprint $t) {
+        Schema::create('rspi.menus', function (Blueprint $t) {
             $t->uuid('id')->primary();
             $t->string('nama');
             $t->string('slug')->unique();            // → permission {slug}.read|create|update|delete
@@ -27,6 +27,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('menus');
+        Schema::dropIfExists('rspi.menus');
     }
 };

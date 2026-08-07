@@ -10,6 +10,8 @@ use App\Models\User;
 use App\Services\ProposalWorkflow;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
@@ -47,7 +49,7 @@ class ProposalWorkflowTest extends TestCase
         $this->assertSame(S::MenungguVerifikasiBerkas, $p->status);
         $this->assertSame(Unit::Penelitian, $p->unit_sekarang);
         $this->assertSame(sprintf('RSPISS-%d-001', now()->year), $p->kode);
-        $this->assertDatabaseHas('proposal_status_history', [
+        $this->assertDatabaseHas('rspi.proposal_status_history', [
             'proposal_id' => $p->id,
             'to_status' => S::MenungguVerifikasiBerkas->value,
         ]);
@@ -85,7 +87,9 @@ class ProposalWorkflowTest extends TestCase
         }
 
         $this->assertSame(S::Selesai, $p->fresh()->status);
-        $this->assertTrue($p->fresh()->isi_survey_kepuasan);
+        // Status Selesai TIDAK dengan sendirinya berarti survey terisi: gate-nya
+        // adalah keberadaan baris respon, bukan penanda yang ikut status.
+        $this->assertFalse($p->fresh()->sudahIsiSurvey());
         $this->assertNull($p->fresh()->unit_sekarang);
         // 1 pengajuan + 11 transisi
         $this->assertSame(12, $p->statusHistory()->count());
@@ -177,9 +181,9 @@ class ProposalWorkflowTest extends TestCase
 
     public function test_versi_dokumen_bertambah_per_jenis(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('dokumen');
+        Storage::fake('dokumen');
         $p = $this->buatProposal();
-        $f = \Illuminate\Http\UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf');
+        $f = UploadedFile::fake()->create('proposal.pdf', 100, 'application/pdf');
 
         $d1 = $this->wf->simpanDokumen($p, DocumentType::Proposal, $f);
         $d2 = $this->wf->simpanDokumen($p, DocumentType::Proposal, $f);

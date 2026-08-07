@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Enums\ProposalStatus as S;
 use App\Models\Proposal;
-use App\Models\ProposalReviewerAssignment;
 use App\Models\User;
 use App\Services\ProposalWorkflow;
 use Database\Seeders\RoleSeeder;
@@ -65,7 +64,7 @@ class ReviewerAssignmentTest extends TestCase
         $this->wf->tugaskanReviewer($p, [$this->rev1->id, $this->rev2->id]);
 
         $this->assertSame(S::MenungguReviewReviewer, $p->fresh()->status);
-        $this->assertSame(2, $p->reviewerAssignments()->count());
+        $this->assertSame(2, $p->penugasanReviewer()->count());
     }
 
     public function test_penugasan_minimal_satu_reviewer(): void
@@ -106,7 +105,7 @@ class ReviewerAssignmentTest extends TestCase
         $this->actingAs($this->rev1);
         $this->wf->reviewerMerespons($p, 'revise', 'Perbaiki metodologi');
         $this->assertSame(S::MenungguReviewReviewer, $p->fresh()->status);
-        $this->assertDatabaseHas('proposal_reviewers', [
+        $this->assertDatabaseHas('rspi.kepk_penugasan_reviewer', [
             'proposal_id' => $p->id, 'reviewer_id' => $this->rev1->id, 'status' => 'revisi',
         ]);
 
@@ -119,7 +118,7 @@ class ReviewerAssignmentTest extends TestCase
         $this->wf->resetPenugasanReviewer($p);
         $this->wf->transition($p, S::MenungguReviewReviewer);
 
-        $this->assertSame(0, $p->reviewerAssignments()->where('status', '!=', 'menunggu')->count());
+        $this->assertSame(0, $p->penugasanReviewer()->where('status', '!=', 'menunggu')->count());
     }
 
     public function test_reviewer_tak_ditugaskan_tidak_boleh_merespons(): void
@@ -151,7 +150,7 @@ class ReviewerAssignmentTest extends TestCase
         $this->actingAs($this->rev1);
         $this->wf->reviewerMerespons($p, 'approve', 'Ronde 2 OK');
 
-        $this->assertSame([1, 2], $p->reviews()->where('reviewer_id', $this->rev1->id)
+        $this->assertSame([1, 2], $p->telaahReviewer()->where('reviewer_id', $this->rev1->id)
             ->orderBy('ronde')->pluck('ronde')->all());
         $this->assertSame(S::DisetujuiReviewer, $p->fresh()->status);
     }

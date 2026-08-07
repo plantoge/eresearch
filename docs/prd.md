@@ -213,11 +213,11 @@ oleh `ProposalWorkflow::transition()`. Daftar transisi lengkap ada di [skema.md]
 | Loloskan → `Menunggu Kelengkapan Berkas Etik` | CRU | catatan (opsional). Tersedia dari `Menunggu Presentasi` **maupun** `Menunggu Verifikasi Revisi` |
 | Lengkapi etik → `Menunggu Penunjukan Reviewer` | Peneliti | **form_kaji_etik**, **informed_consent**, **pks**, **kerahasiaan_data** (semua wajib) |
 | Tunjuk reviewer → `Menunggu Review Reviewer` | KEPK | pilih ≥1 user ber-role reviewer |
-| Tanggapan reviewer *(status tetap)* | Reviewer | komentar (wajib bila minta revisi) + opsional `tanggapan_reviewer` + ACC/revisi |
+| Tanggapan reviewer *(status tetap)* | Reviewer | komentar (wajib bila minta revisi) + opsional berkas telaah (`kepk_dokumen_telaah`) + ACC/revisi |
 | Teruskan revisi → `Perlu Revisi Reviewer` | KEPK | catatan untuk peneliti (wajib); opsional `surat_tanggapan`. Hanya aktif bila ada reviewer yang meminta revisi |
 | Kirim revisi etik → `Menunggu Review Reviewer` | Peneliti | re-upload ≥1 berkas etik; semua penugasan reviewer reset |
 | Semua ACC → `Disetujui Reviewer` | (otomatis) | — |
-| Tolak etik → `Ditolak Kaji Etik` | KEPK | alasan (wajib), tercatat di `proposal_reviews` |
+| Tolak etik → `Ditolak Kaji Etik` | KEPK | alasan (wajib), tercatat di `kepk_telaah_reviewer` + keputusan `tidak_layak` di `kepk_protokol_etik` |
 | Lanjutkan → `Menunggu Pembayaran` | KEPK | hanya aktif bila semua reviewer ACC |
 | Bayar → `Menunggu Verifikasi Pembayaran` | Peneliti | **bukti_bayar_cru** + **bukti_bayar_kepk** (keduanya wajib) |
 | Terbitkan draft → `Pelaksanaan Penelitian` | CRU | `izin_draft` (wajib) |
@@ -233,7 +233,7 @@ Batas ukuran & format per jenis dokumen ada di `DocumentType::aturanValidasi()`
 
 ## 6. Aturan Bisnis yang Tidak Boleh Dilanggar
 
-1. **Kerahasiaan reviewer.** Komentar reviewer, file `tanggapan_reviewer`, dan identitas
+1. **Kerahasiaan reviewer.** Komentar reviewer, berkas telaah, dan identitas
    reviewer **tidak pernah** terlihat oleh peneliti. Peneliti hanya menerima rangkuman dari
    KEPK. Di riwayat status yang dilihat peneliti, pelaku disamarkan menjadi "Reviewer".
 2. **Reviewer hanya melihat proposal yang ditugaskan kepadanya**, bukan seluruh antrian.

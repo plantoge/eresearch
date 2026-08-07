@@ -21,9 +21,13 @@
                     <div><span class="opacity-60">Institusi:</span><br>{{ $proposal->institusi_asal ?: '—' }}</div>
                     <div class="sm:col-span-2"><span class="opacity-60">Judul:</span><br>{{ $proposal->judul_penelitian }}</div>
                     <div class="sm:col-span-2"><span class="opacity-60">Tim:</span><br>{{ $proposal->tim_peneliti ?: '—' }}</div>
-                    @if ($proposal->tanggal_presentasi)
-                        <div><span class="opacity-60">Presentasi:</span><br>{{ $proposal->tanggal_presentasi->format('d/m/Y H:i') }}</div>
-                        <div><span class="opacity-60">Kategori / media:</span><br>{{ $proposal->kategori_presentasi }} · {{ $proposal->media_presentasi }}</div>
+                    @if ($berkasCru?->tanggal_presentasi)
+                        <div><span class="opacity-60">Presentasi:</span><br>{{ $berkasCru->tanggal_presentasi->format('d/m/Y H:i') }}</div>
+                        <div><span class="opacity-60">Kategori / media:</span><br>{{ $berkasCru->kategori_presentasi }} · {{ $berkasCru->media_presentasi }}</div>
+                    @endif
+                    @if ($protokolEtik?->nomor_protokol)
+                        <div><span class="opacity-60">No. protokol etik:</span><br>{{ $protokolEtik->nomor_protokol }}</div>
+                        <div><span class="opacity-60">Jenis telaah:</span><br>{{ $protokolEtik->jenis_telaah?->label() ?? '—' }}</div>
                     @endif
                 </div>
             </x-mary-card>
@@ -37,12 +41,45 @@
                             <div class="text-xs opacity-60">v{{ $latest->versi }} · {{ $latest->nama_asli }} · {{ $latest->created_at->format('d/m/Y H:i') }}</div>
                         </div>
                         <x-mary-button icon="o-arrow-down-tray" link="{{ route('dokumen.download', $latest) }}" class="btn-ghost btn-sm" external
-                            tooltip="{{ $tipe === DocumentType::IzinFinal && ! $proposal->isi_survey_kepuasan ? 'Terkunci — isi survey dulu' : 'Unduh' }}" />
+                            tooltip="{{ $tipe === DocumentType::IzinFinal && ! $proposal->sudahIsiSurvey() ? 'Terkunci — isi survey dulu' : 'Unduh' }}" />
                     </div>
                 @empty
                     <div class="opacity-60 text-sm">Belum ada dokumen.</div>
                 @endforelse
             </x-mary-card>
+
+            {{-- Berkas telaah ada di tabel & route terpisah: peneliti tidak punya jalan ke sini. --}}
+            @if ($bolehLihatReview && $dokumenTelaah->isNotEmpty())
+                <x-mary-card title="Berkas Telaah Reviewer" subtitle="Rahasia — tidak pernah terlihat oleh peneliti" shadow>
+                    @foreach ($dokumenTelaah as $d)
+                        <div class="flex items-center justify-between py-2 border-b border-base-200 last:border-0">
+                            <div>
+                                <div class="font-medium text-sm">{{ $d->nama_asli ?: 'File tanggapan reviewer' }}</div>
+                                <div class="text-xs opacity-60">v{{ $d->versi }} · {{ $d->created_at->format('d/m/Y H:i') }}</div>
+                            </div>
+                            <x-mary-button icon="o-arrow-down-tray" link="{{ route('dokumen-telaah.download', $d) }}"
+                                class="btn-ghost btn-sm" external tooltip="Unduh" />
+                        </div>
+                    @endforeach
+                </x-mary-card>
+            @endif
+
+            @if ($pembayaran->isNotEmpty())
+                <x-mary-card title="Pembayaran" subtitle="Dua pembayaran terpisah — CRU dan KEPK" shadow>
+                    <table class="table table-sm">
+                        <thead><tr><th>Tujuan</th><th>Status</th><th>Catatan</th></tr></thead>
+                        <tbody>
+                        @foreach ($pembayaran as $bayar)
+                            <tr>
+                                <td>{{ $bayar->tujuan->label() }}</td>
+                                <td><span class="badge badge-sm {{ $bayar->status->warna() }}">{{ $bayar->status->label() }}</span></td>
+                                <td class="text-xs opacity-70">{{ $bayar->catatan ?: '—' }}</td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </x-mary-card>
+            @endif
 
             {{-- ===== PANEL AKSI PENELITI ===== --}}
             @if ($isPemilik)
@@ -206,6 +243,13 @@
             {{-- ===== PANEL AKSI KEPK ===== --}}
             @if ($isKepk && $proposal->status === ProposalStatus::MenungguPenunjukanReviewer)
                 <x-mary-card title="Penunjukan Reviewer" subtitle="Pilih minimal 1 reviewer untuk menelaah berkas etik" shadow>
+                    {{-- Penomoran KEPK sendiri, terpisah dari kode RSPISS milik CRU --}}
+                    <div class="grid sm:grid-cols-3 gap-2 mb-3">
+                        <x-mary-input label="No. protokol etik" wire:model="nomor_protokol" placeholder="mis. KEPK-2026-014" />
+                        <x-mary-select label="Jenis telaah" wire:model="jenis_telaah" placeholder="Pilih..."
+                            :options="collect($opsiJenisTelaah)->map(fn ($j) => ['id' => $j->value, 'name' => $j->label()])" />
+                        <x-mary-input label="Tanggal sidang" wire:model="tanggal_sidang" type="datetime-local" />
+                    </div>
                     <x-mary-choices-offline label="Reviewer" wire:model="reviewerTerpilih"
                         :options="$reviewerOptions" placeholder="Pilih reviewer..." searchable />
                     <x-mary-textarea label="Catatan (opsional)" wire:model="catatan" rows="2" />
@@ -244,6 +288,11 @@
                     <x-mary-textarea label="Catatan untuk peneliti / alasan" wire:model="catatan" rows="2"
                         hint="Saat meneruskan revisi, rangkum masukan reviewer di sini — nama reviewer jangan disebut." />
                     <x-mary-file label="Surat tanggapan resmi untuk peneliti (PDF, opsional)" wire:model="fileUpload" accept="application/pdf" />
+
+                    @if ($proposal->semuaReviewerAcc())
+                        <x-mary-input label="Nomor ethical clearance" wire:model="nomor_ec" class="mt-3"
+                            placeholder="Diisi saat meloloskan ke Tahap 3" />
+                    @endif
 
                     <x-slot:actions>
                         @if ($adaRevisi && $proposal->status === ProposalStatus::MenungguReviewReviewer)

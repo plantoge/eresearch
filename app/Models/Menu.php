@@ -10,6 +10,8 @@ class Menu extends Model
 {
     use HasUuidAndAudit, SoftDeletes;
 
+    protected $table = 'rspi.menus';
+
     public $incrementing = false;
 
     protected $keyType = 'string';

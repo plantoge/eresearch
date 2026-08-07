@@ -13,6 +13,9 @@ class DocumentDownloadController extends Controller
      * Unduh dokumen proposal dengan otorisasi:
      * - pemilik proposal atau petugas unit (permission read antrian),
      * - khusus izin_final: TERKUNCI sampai survey kepuasan terisi (prd Tahap 4).
+     *
+     * Tidak ada lagi penyaringan berkas rahasia di sini: file tanggapan reviewer
+     * tidak pernah masuk tabel ini (lihat DokumenTelaahDownloadController).
      */
     public function __invoke(Request $request, ProposalDocument $document)
     {
@@ -25,15 +28,9 @@ class DocumentDownloadController extends Controller
             403,
         );
 
-        // Kerahasiaan: file tanggapan reviewer hanya untuk petugas, bukan peneliti
-        if ($document->jenis === DocumentType::TanggapanReviewer
-            && ! $user->canAny(['antrian-cru.read', 'kaji-etik.read', 'antrian-reviewer.read'])) {
-            abort(403);
-        }
-
         if ($document->jenis === DocumentType::IzinFinal
             && $proposal->user_id === $user->id
-            && ! $proposal->respon()->exists()) {
+            && ! $proposal->sudahIsiSurvey()) {
             abort(403, 'Surat izin final terkunci — isi survey kepuasan terlebih dahulu.');
         }
 

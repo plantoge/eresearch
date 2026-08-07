@@ -6,13 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Telaah per ronde — ditulis reviewer, dan KEPK saat menolak etik.
+     * Isinya rahasia dari peneliti; karena itu berdiri sendiri di kelompok kepk_.
+     *
+     * Kolom `tahap` dibuang: telaah hanya pernah terjadi di Tahap 2, nilainya
+     * selalu 2 dan tidak pernah dibaca.
+     */
     public function up(): void
     {
-        Schema::create('proposal_reviews', function (Blueprint $t) {
+        Schema::create('rspi.kepk_telaah_reviewer', function (Blueprint $t) {
             $t->uuid('id')->primary();
             $t->uuid('proposal_id');
-            $t->unsignedTinyInteger('tahap');        // 1..4
-            $t->string('unit');                      // enum Unit (D3)
+            $t->string('unit');                      // enum Unit — pembeda reviewer vs KEPK
             $t->uuid('reviewer_id')->nullable();
             $t->string('keputusan');                 // approve|revise|reject
             $t->text('komentar')->nullable();
@@ -27,6 +33,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('proposal_reviews');
+        Schema::dropIfExists('rspi.kepk_telaah_reviewer');
     }
 };

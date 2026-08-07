@@ -95,7 +95,10 @@ return [
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => 'public',
+            // 'public' tetap di depan: migration bawaan Laravel & spatie menulis tanpa
+            // kualifikasi schema dan harus mendarat di sana. Tabel domain tidak
+            // bergantung urutan ini — namanya dikualifikasi eksplisit ('rspi.proposal').
+            'search_path' => 'public,rspi',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 

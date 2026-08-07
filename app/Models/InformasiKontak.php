@@ -10,7 +10,7 @@ class InformasiKontak extends Model
 {
     use HasUuidAndAudit, SoftDeletes;
 
-    protected $table = 'informasi_kontak';
+    protected $table = 'rspi.informasi_kontak';
 
     public $incrementing = false;
 

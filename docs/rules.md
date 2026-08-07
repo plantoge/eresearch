@@ -37,9 +37,12 @@
    pencatatan `proposal_status_history` terjadi. Menyetel langsung = audit trail bolong.
 2. **Transisi baru didaftarkan di enum, bukan di komponen.** Tambahkan pasangan status di
    `ProposalStatus::allowedNext()`; `canGoTo()` yang menegakkannya.
-3. **Kerahasiaan reviewer tidak boleh bocor** — komentar, file `tanggapan_reviewer`, dan
-   identitas reviewer tidak pernah sampai ke peneliti (lihat [prd.md §6](prd.md#6-aturan-bisnis-yang-tidak-boleh-dilanggar)).
-   Setiap query dokumen/review yang bisa dilihat peneliti wajib disaring.
+3. **Kerahasiaan reviewer tidak boleh bocor** — komentar, berkas telaah, dan identitas reviewer
+   tidak pernah sampai ke peneliti (lihat [prd.md §6](prd.md#6-aturan-bisnis-yang-tidak-boleh-dilanggar)).
+   Berkas telaah hidup di `kepk_dokumen_telaah` dengan route unduh sendiri — **jangan pernah
+   memindahkannya ke `proposal_documents`**, karena di sanalah kerahasiaannya kembali bergantung
+   pada penyaringan yang harus diingat. Query komentar telaah tetap wajib disaring
+   `$bolehLihatReview`.
 4. **Aturan file diambil dari enum**, bukan ditulis ulang di komponen:
    `DocumentType::aturanValidasi()`. Menambah jenis dokumen = menambah case enum, bukan kolom baru.
 5. **Gate survey** — `izin_final` tidak boleh bisa diunduh peneliti sebelum baris `respon`
@@ -79,7 +82,15 @@ PHP='/c/laragon/bin/php/php-8.4.12-nts-Win32-vs17-x64/php.exe'
 - **`artisan config:clear` wajib setiap kali `.env` berubah** — `config/eproposal.php` dan
   disk `dokumen` membaca env, dan cache config membuat perubahan tidak berefek.
 - Jalankan **`artisan test`** sebelum commit. Suite mencakup workflow proposal, penugasan
-  reviewer, gate survey, captcha, verifikasi email, dan sinkronisasi menu→permission.
+  reviewer, berkas kerja CRU/KEPK, gate survey, captcha, verifikasi email, dan sinkronisasi
+  menu→permission.
+- **Tes berjalan di PostgreSQL, bukan SQLite in-memory** (`phpunit.xml`): struktur memakai
+  schema `rspi`, dan SQLite membaca `"rspi"."proposal"` sebagai *attached database*. Perlu DB
+  `cru_test` yang dibuat sekali oleh pemilik sistem:
+  ```sql
+  create database cru_test;
+  ```
+  Efek sampingannya bagus — `pg_advisory_xact_lock()` di `generateKode()` akhirnya ikut teruji.
 - Satu pekerjaan selesai = satu commit, dengan pesan yang menjelaskan perubahan.
 
 ---
@@ -93,9 +104,11 @@ PHP='/c/laragon/bin/php/php-8.4.12-nts-Win32-vs17-x64/php.exe'
   `information_schema` — semuanya read-only.
 - Perubahan struktur hanya lewat **file migration baru** yang dijalankan sendiri oleh pemilik
   sistem, bukan dieksekusi diam-diam. Jangan mengedit migration yang sudah pernah jalan.
-- DB `eprotocol` saat ini berisi **data uji volume besar** (>1,2 juta baris `proposal` dari
-  `ProposalBulkSeeder`) — perhitungkan itu saat menguji query; jangan menghapusnya tanpa
-  persetujuan.
+- **Nama tabel domain harus dikualifikasi schema** saat memeriksa:
+  `artisan db:table rspi.proposal`, bukan `db:table proposal`. User DB butuh `USAGE` + `CREATE`
+  di schema `rspi`; kalau lupa, gejalanya `permission denied for schema rspi` saat migrate.
+- **Nama database berbeda antar lingkungan.** `.env` di mesin dev menunjuk `cru`; dokumen lama
+  menyebut `eprotocol` (lingkungan lain). Periksa `.env` dulu, jangan mengandalkan nama di docs.
 
 ---
 

@@ -4,8 +4,9 @@
 > aturan kerja → [rules.md](rules.md).
 >
 > Isi file ini **sudah dicocokkan dengan `database/migrations/` dan database nyata**
-> (`eprotocol` @ PostgreSQL 14.23, dicek read-only lewat `artisan db:table`).
-> Bukan rancangan target — ini kondisi terpasang.
+> (`cru` @ PostgreSQL, dicek read-only lewat `information_schema`).
+> Bukan rancangan target — ini kondisi terpasang: 14 tabel di `public`, 17 di `rspi`,
+> 7 partial unique index.
 
 ---
 
@@ -32,24 +33,36 @@ $t->auditColumns();   // created_by, updated_by, deleted_by
 ```
 
 **Model** — trait `App\Concerns\HasUuidAndAudit` mengisi `id` dan kolom audit lewat event
-`creating` / `updating` / `deleting`, plus relasi `createdBy()`, `updatedBy()`, `deletedBy()`:
+`creating` / `updating` / `deleting`, plus relasi `createdBy()`, `updatedBy()`, `deletedBy()`.
 
-```php
-class Proposal extends Model
-{
-    use HasUuidAndAudit, SoftDeletes;
+### Dua schema PostgreSQL
 
-    protected $table = 'proposal';
-    public $incrementing = false;
-    protected $keyType = 'string';
-}
-```
+| Schema | Isi |
+|---|---|
+| `public` | 14 tabel bawaan: Laravel (`users`, `sessions`, `cache`, `jobs`, `migrations`, …) + 5 tabel RBAC spatie |
+| `rspi` | 17 tabel domain — seluruh isi aplikasi |
 
-**Schema PostgreSQL:** seluruh 26 tabel berada di schema **`public`**. (Aplikasi lama memakai
-schema `eproposal`/`survey`; rancangan itu tidak jadi dipakai.)
+`search_path` = **`public,rspi`** (`config/database.php`). `public` sengaja di depan: migration
+bawaan Laravel dan spatie menulis tanpa kualifikasi schema dan harus mendarat di sana. Tabel
+domain tidak bergantung urutan itu — namanya **dikualifikasi eksplisit** di migration
+(`Schema::create('rspi.proposal')`) maupun model (`protected $table = 'rspi.proposal'`).
+
+`users` tetap di `public` walau punya kolom domain: dia target morph spatie dan dipakai auth
+bawaan.
+
+### Penamaan: prefiks kelompok
+
+Karena CRU dan KEPK berbagi satu schema, **nama tabel yang menyatakan kelompoknya**:
+
+| Awalan | Arti |
+|---|---|
+| *(tanpa awalan)* | kernel & konfigurasi — dipakai lintas unit |
+| `cru_` | berkas kerja CRU |
+| `kepk_` | berkas kerja KEPK |
 
 **Foreign key sengaja ditunda.** Kolom relasi `*_id` ada dan ter-index, tapi tanpa constraint FK.
 Integritas dijaga di layer aplikasi (`ProposalWorkflow`, guard di komponen Livewire).
+Yang **tidak** ditunda: hubungan 1:1 ditegakkan database lewat *partial unique index*.
 
 ---
 
@@ -58,15 +71,22 @@ Integritas dijaga di layer aplikasi (`ProposalWorkflow`, guard di komponen Livew
 ```mermaid
 erDiagram
     users ||--o{ proposal : mengajukan
-    users ||--o{ proposal_reviewers : ditugaskan
-    users ||--o{ proposal_reviews : menulis
+    users ||--o{ kepk_penugasan_reviewer : ditugaskan
+    users ||--o{ kepk_telaah_reviewer : menulis
     users ||--o{ respon : mengisi
 
     proposal ||--o{ proposal_documents : "berkas"
     proposal ||--o{ proposal_status_history : "jejak status"
-    proposal ||--o{ proposal_reviews : "komentar per ronde"
-    proposal ||--o{ proposal_reviewers : "penugasan reviewer"
+    proposal ||--o| cru_berkas_penelitian : "berkas kerja CRU"
+    proposal ||--o{ cru_pembayaran : "2 tagihan"
+    proposal ||--o| cru_izin_penelitian : "izin"
+    proposal ||--o| kepk_protokol_etik : "berkas kerja KEPK"
+    proposal ||--o{ kepk_telaah_reviewer : "telaah per ronde"
+    proposal ||--o{ kepk_penugasan_reviewer : "penugasan reviewer"
     proposal ||--o| respon : "1 survey aktif"
+
+    kepk_telaah_reviewer ||--o{ kepk_dokumen_telaah : "file tanggapan"
+    cru_pembayaran ||--o| proposal_documents : "bukti bayar"
 
     respon ||--o{ jawaban : "jawaban per pertanyaan"
     master_aspek ||--o{ master_pertanyaan : "punya"
@@ -75,13 +95,6 @@ erDiagram
 
     menus ||--o{ menus : "submenu (parent_id)"
 
-    users {
-        uuid id PK
-        string name
-        string email UK
-        timestamp email_verified_at
-        string institusi_asal
-    }
     proposal {
         uuid id PK
         smallint tahun
@@ -90,72 +103,64 @@ erDiagram
         uuid user_id FK
         string status
         string unit_sekarang
-        bool isi_survey_kepuasan
     }
-    proposal_documents {
-        uuid id PK
-        uuid proposal_id FK
-        string jenis
-        string path
-        smallint versi
+    cru_berkas_penelitian {
+        uuid proposal_id UK
+        timestamp tanggal_presentasi
+        string kategori_presentasi
+        text catatan_verifikasi
     }
-    proposal_status_history {
-        uuid id PK
+    cru_pembayaran {
         uuid proposal_id FK
-        string from_status
-        string to_status
-        string unit
-        uuid actor_id
-        text catatan
+        string tujuan
+        bigint nominal
+        string status
+        uuid dokumen_id FK
     }
-    proposal_reviews {
-        uuid id PK
-        uuid proposal_id FK
-        uuid reviewer_id FK
-        string unit
+    cru_izin_penelitian {
+        uuid proposal_id UK
+        string nomor_izin
+        timestamp tanggal_terbit_final
+        date berlaku_sampai
+    }
+    kepk_protokol_etik {
+        uuid proposal_id UK
+        string nomor_protokol UK
+        string jenis_telaah
+        timestamp tanggal_sidang
         string keputusan
-        text komentar
-        smallint ronde
+        string nomor_ec
     }
-    proposal_reviewers {
-        uuid id PK
+    kepk_penugasan_reviewer {
         uuid proposal_id FK
         uuid reviewer_id FK
         string status
     }
-    respon {
-        uuid id PK
+    kepk_telaah_reviewer {
         uuid proposal_id FK
-        uuid responden_id FK
-        text saran
+        uuid reviewer_id FK
+        string unit
+        string keputusan
+        smallint ronde
     }
-    jawaban {
-        uuid id PK
-        uuid respon_id FK
-        uuid master_pertanyaan_id FK
-        uuid master_skala_id FK
-    }
-    menus {
-        uuid id PK
-        string nama
-        string slug UK
-        string route
-        uuid parent_id
-        int urutan
-        bool aktif
+    kepk_dokumen_telaah {
+        uuid proposal_id FK
+        uuid telaah_id FK
+        string path
+        smallint versi
     }
 ```
 
-Tabel yang tidak digambar karena berdiri sendiri: `informasi_kontak` (singleton konfigurasi),
-tabel RBAC spatie, dan tabel infrastruktur Laravel (§7).
+Tidak digambar karena berdiri sendiri: `informasi_kontak` (singleton konfigurasi), `menus`,
+tabel RBAC spatie, dan tabel infrastruktur Laravel (§8).
 
 ---
 
-## 3. Tabel Inti Proposal
+## 3. Kernel — dipakai lintas unit
 
-### `proposal`
-Satu baris = satu pengajuan. Tidak ada kolom file di sini (semua di `proposal_documents`),
-tidak ada kolom tahapan (turunan status).
+### `rspi.proposal`
+Satu baris = satu pengajuan. Tidak ada kolom file (semua di `proposal_documents`), tidak ada
+kolom tahapan (turunan status), dan **tidak ada data kerja unit** — itu ada di §4 dan §5.
 
 | Kolom | Tipe | Keterangan |
 |---|---|---|
@@ -168,15 +173,12 @@ tidak ada kolom tahapan (turunan status).
 | `judul_penelitian` | text | |
 | `institusi_asal` / `email` / `phone` | varchar null | snapshot pengaju saat mengajukan |
 | `user_id` | uuid | pengaju |
-| `status` | varchar | cast enum `ProposalStatus` |
+| `status` | varchar | cast enum `ProposalStatus` — **satu-satunya sumber kebenaran alur** |
 | `unit_sekarang` | varchar null | cast enum `Unit`; **turunan status**, disimpan agar antrian ter-index |
-| `tanggal_presentasi` | timestamp null | |
-| `kategori_presentasi` / `media_presentasi` | varchar null | |
-| `isi_survey_kepuasan` | boolean default false | di-set `true` saat status → `Selesai` |
 
 Index: `unique(kode)` · `unique(tahun, nomor)` · index `status`, `unit_sekarang`, `user_id`.
 
-### `proposal_documents`
+### `rspi.proposal_documents`
 Satu baris = satu file. Menambah jenis dokumen = menambah nilai enum `DocumentType`,
 **bukan** menambah kolom.
 
@@ -191,7 +193,11 @@ Satu baris = satu file. Menambah jenis dokumen = menambah nilai enum `DocumentTy
 
 Index: `(proposal_id, jenis)`.
 
-### `proposal_status_history`
+Tabel ini **tidak dipecah per unit**: strukturnya seragam dan `jenis` sudah membedakan pemilik.
+Berkas rahasia telaah reviewer bukan pengecualian di sini — ia tidak pernah masuk tabel ini
+sama sekali (§5).
+
+### `rspi.proposal_status_history`
 Audit tektokan status. Ditulis otomatis oleh `ProposalWorkflow::catatHistory()` pada setiap
 transisi — termasuk pengajuan pertama (`from_status = null`).
 
@@ -203,24 +209,65 @@ transisi — termasuk pengajuan pertama (`from_status = null`).
 | `actor_id` | user yang memindahkan |
 | `catatan` | catatan bebas dari pelaku |
 
-Index: `proposal_id`.
+Index: `proposal_id`. **Sengaja tidak dipecah per unit** — satu proposal melintasi CRU dan KEPK,
+dan riwayat yang terpotong justru merusak hal yang mau dilindungi.
 
-### `proposal_reviews`
-Komentar & keputusan per ronde — dipakai reviewer (unit `reviewer`) dan KEPK saat menolak
-etik (unit `kaji_etik`).
+---
+
+## 4. Berkas Kerja CRU
+
+Baris satelit dibuat **saat CRU pertama kali menyentuh proposal**, bukan saat pengajuan —
+supaya keberadaan baris berarti sesuatu.
+
+### `rspi.cru_berkas_penelitian` — 1:1
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `proposal_id` | uuid | **partial unique** `where deleted_at is null` |
+| `tanggal_presentasi` | timestamp null | |
+| `kategori_presentasi` / `media_presentasi` | varchar null | |
+| `catatan_verifikasi` | text null | catatan CRU atas berkas Tahap 1 |
+| `diverifikasi_oleh` / `diverifikasi_pada` | uuid / timestamp null | |
+
+### `rspi.cru_pembayaran` — 2 baris per proposal
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `proposal_id` | uuid | |
+| `tujuan` | varchar | enum `TujuanPembayaran` = `cru` \| `kepk` |
+| `nominal` | bigint null | rupiah sebagai **integer**, bukan desimal |
+| `status` | varchar | enum `StatusPembayaran`, default `menunggu` |
+| `dokumen_id` | uuid null | menunjuk baris bukti bayar di `proposal_documents` |
+| `diverifikasi_oleh` / `diverifikasi_pada` | uuid / timestamp null | |
+| `catatan` | text null | alasan bila ditolak |
+
+Partial unique `(proposal_id, tujuan)` · index `(proposal_id, status)`.
+
+Kirim ulang setelah ditolak memakai **baris yang sama**; riwayat buktinya ada di `versi`
+dokumen. `DocumentType` tetap punya dua nilai `bukti_bayar_cru` dan `bukti_bayar_kepk` — kalau
+digabung jadi satu jenis, kedua bukti saling menaikkan versi dan riwayat revisinya kacau.
+
+### `rspi.cru_izin_penelitian` — 1:1
+
+`proposal_id` (partial unique), `nomor_izin`, `tanggal_terbit_draft`, `tanggal_terbit_final`,
+`berlaku_sampai` (date), `diterbitkan_oleh`.
+
+---
+
+## 5. Berkas Kerja KEPK
+
+### `rspi.kepk_protokol_etik` — 1:1
 
 | Kolom | Keterangan |
 |---|---|
-| `tahap` | tinyint 1..4 |
-| `unit` | enum `Unit` |
-| `reviewer_id` | penulis |
-| `keputusan` | `approve` \| `revise` \| `reject` |
-| `komentar` | teks |
-| `ronde` | naik per reviewer tiap kali merespons |
+| `proposal_id` | partial unique |
+| `nomor_protokol` | penomoran KEPK sendiri, **terpisah** dari `RSPISS-YYYY-###`. Partial unique (abaikan null) |
+| `jenis_telaah` | enum `JenisTelaah` = `exempted` \| `expedited` \| `full_board` |
+| `tanggal_sidang` | timestamp null |
+| `keputusan` | enum `KeputusanEtik` = `layak` \| `tidak_layak` |
+| `nomor_ec` / `tanggal_terbit_ec` / `berlaku_sampai` | ethical clearance yang diterbitkan |
 
-Index: `(proposal_id, ronde)`.
-
-### `proposal_reviewers`
+### `rspi.kepk_penugasan_reviewer`
 Penugasan reviewer oleh KEPK — bisa lebih dari satu per proposal.
 
 | Kolom | Keterangan |
@@ -234,9 +281,33 @@ Aturan: antrian reviewer = proposal berstatus `Menunggu Review Reviewer` yang pe
 `menunggu`. Semua penugasan `acc` → proposal otomatis `Disetujui Reviewer`. Peneliti kirim
 revisi → semua penugasan di-reset ke `menunggu` (ronde baru).
 
+### `rspi.kepk_telaah_reviewer`
+Komentar & keputusan per ronde — dipakai reviewer (unit `reviewer`) dan KEPK saat menolak
+etik (unit `kaji_etik`).
+
+| Kolom | Keterangan |
+|---|---|
+| `unit` | enum `Unit` — pembeda telaah reviewer vs penolakan KEPK |
+| `reviewer_id` | penulis |
+| `keputusan` | `approve` \| `revise` \| `reject` |
+| `komentar` | teks |
+| `ronde` | naik per reviewer tiap kali merespons |
+
+Index: `(proposal_id, ronde)`.
+
+### `rspi.kepk_dokumen_telaah`
+File tanggapan reviewer: `proposal_id`, `telaah_id` (null-able), `path`, `nama_asli`, `versi`,
+`uploaded_by`. Index `(proposal_id)`. Aturan upload di `DokumenTelaah::ATURAN_VALIDASI`.
+
+**Kenapa tabel sendiri.** Selama berkas ini duduk di `proposal_documents`, kerahasiaannya
+bergantung pada sebuah `if` di `DocumentDownloadController` dan filter yang harus diingat di
+setiap query baru. Setelah dipisah, peneliti tidak punya satu pun route yang menjangkaunya —
+unduhannya lewat `DokumenTelaahDownloadController` yang hanya menerima pemegang permission
+unit. Lupa memfilter jadi tidak mungkin, bukan sekadar belum pernah terjadi.
+
 ---
 
-## 4. Enum
+## 6. Enum
 
 Semua nilai disimpan sebagai string di kolom `varchar`, di-cast lewat `$casts` model.
 
@@ -269,7 +340,7 @@ Helper lain di enum ini: `tahapan()` (1–4, `null` untuk terminal) · `unit()` 
 `null` untuk `Selesai`/`Dibatalkan`) · `isTerminal()` · `warna()` (kelas badge daisyUI) ·
 `bolaDiPeneliti()`.
 
-### `App\Enums\DocumentType` (17 nilai)
+### `App\Enums\DocumentType` (16 nilai)
 
 | Kelompok | Nilai |
 |---|---|
@@ -277,39 +348,60 @@ Helper lain di enum ini: `tahapan()` (1–4, `null` untuk terminal) · `unit()` 
 | Tahap 2 | `form_kaji_etik`, `informed_consent`, `pks`, `kerahasiaan_data` *(semua wajib)* |
 | Tahap 3 | `bukti_bayar_cru`, `bukti_bayar_kepk` *(keduanya wajib)* |
 | Tahap 4 | `laporan_penelitian`, `raw_data` |
-| Output admin | `izin_draft`, `izin_final`, `surat_penolakan`, `surat_tanggapan`, `tanggapan_reviewer` |
+| Output admin | `izin_draft`, `izin_final`, `surat_penolakan`, `surat_tanggapan` |
 
 Helper: `label()` · `wajibTahap1()` / `opsionalTahap1()` / `wajibTahap2()` ·
 `aturanValidasi()` (aturan upload Livewire) · `milikAdmin()`.
-`tanggapan_reviewer` tidak pernah bisa diunduh peneliti (dijaga `DocumentDownloadController`).
+
+Tidak ada lagi nilai `tanggapan_reviewer` — berkas itu punya tabelnya sendiri (§5).
 
 ### `App\Enums\Unit` (3 nilai)
 `penelitian` (CRU) · `kaji_etik` (KEPK) · `reviewer`. Kosakata yang sama dipakai di
-`proposal.unit_sekarang`, `proposal_status_history.unit`, dan `proposal_reviews.unit`.
+`proposal.unit_sekarang`, `proposal_status_history.unit`, dan `kepk_telaah_reviewer.unit`.
+
+### Enum berkas kerja
+
+| Enum | Nilai |
+|---|---|
+| `TujuanPembayaran` | `cru`, `kepk` — plus `jenisDokumen()` yang memetakan ke `DocumentType` |
+| `StatusPembayaran` | `menunggu`, `terverifikasi`, `ditolak` — plus `label()`, `warna()` |
+| `JenisTelaah` | `exempted`, `expedited`, `full_board` |
+| `KeputusanEtik` | `layak`, `tidak_layak` |
+
+> **`JenisTelaah` dan `KeputusanEtik` belum dikonfirmasi ke KEPK RSPI.** Istilahnya standar
+> WHO/CIOMS dan lazim di komite etik Indonesia, tapi belum tentu sama dengan SOP setempat.
+> Karena disimpan sebagai string, menggantinya cukup mengubah satu file enum — **tanpa
+> migration**, selama belum ada data produksi.
 
 ---
 
-## 5. Survey Kepuasan
+## 7. Survey Kepuasan
 
 | Tabel | Isi |
 |---|---|
-| `master_aspek` | `nama_aspek`, `deskripsi`, `urutan`, `status_aktif` |
-| `master_pertanyaan` | `master_aspek_id`, `pertanyaan`, `is_required`, `urutan`, `status_aktif` |
-| `master_skala` | `nama_skala`, `nilai` (int), `urutan` |
-| `respon` | `proposal_id`, `responden_id`, `responden` & `jenis_responden` (snapshot), `saran` |
-| `jawaban` | `respon_id`, `master_pertanyaan_id`, `master_skala_id`, + snapshot teks `pertanyaan` & `jawaban` |
+| `rspi.master_aspek` | `nama_aspek`, `deskripsi`, `urutan`, `status_aktif` |
+| `rspi.master_pertanyaan` | `master_aspek_id`, `pertanyaan`, `is_required`, `urutan`, `status_aktif` |
+| `rspi.master_skala` | `nama_skala`, `nilai` (int), `urutan` |
+| `rspi.respon` | `proposal_id`, `responden_id`, `responden` & `jenis_responden` (snapshot), `saran` |
+| `rspi.jawaban` | `respon_id`, `master_pertanyaan_id`, `master_skala_id`, + snapshot teks `pertanyaan` & `jawaban` |
 
 **Partial unique** `respon (proposal_id) where deleted_at is null` — satu survey aktif per
 proposal. Baris `respon` inilah yang membuka kunci unduhan `izin_final`.
+
+**Tidak ada penanda boolean di tabel `proposal`.** Satu-satunya cara menjawab "sudah isi
+survey?" adalah `Proposal::sudahIsiSurvey()` → `respon()->exists()`, dipakai bersama oleh
+`DocumentDownloadController` dan view. Kolom `isi_survey_kepuasan` yang dulu ada dibuang karena
+jadi sumber kebenaran kedua: ia hanya diset saat status jadi `Selesai`, jadi kalau baris
+`respon` dihapus, penandanya tetap `true` dan izin final ikut terbuka.
 
 Snapshot teks pertanyaan & jawaban disimpan di `jawaban` supaya laporan lama tidak berubah
 ketika master pertanyaan/skala diedit.
 
 ---
 
-## 6. Menu Dinamis & Informasi Kontak
+## 8. Menu Dinamis, Kontak & Tabel Bawaan
 
-### `menus`
+### `rspi.menus`
 `nama`, `slug` (unique), `route`, `icon`, `parent_id`, `urutan`, `aktif`.
 Index `(parent_id, urutan)`.
 
@@ -317,15 +409,13 @@ Index `(parent_id, urutan)`.
 menu dibuat → `{slug}.read|create|update|delete` dibuat; slug diganti → permission di-rename;
 menu dihapus → permission dihapus. Cache permission di-flush tiap perubahan.
 
-### `informasi_kontak`
+### `rspi.informasi_kontak`
 Tabel konfigurasi satu-baris: telepon, fax, callcenter, hotline, email, alamat, sosial media,
 contact person per layanan (kaji etik, PKS, MTA, kerahasiaan), serta **data rekening
 pembayaran** (`pemilik_rekening`, `nomor_rekening`, `nama_bank`, `logo_bank`, `deskripsi_biaya`)
 yang ditampilkan ke peneliti pada Tahap 3.
 
----
-
-## 7. Tabel Bawaan
+### Tabel di `public`
 
 **RBAC (spatie/laravel-permission v8):** `permissions`, `roles`, `model_has_permissions`,
 `model_has_roles`, `role_has_permissions`. Morph key di-set ke **uuid**; `'teams' => false`.
@@ -338,16 +428,20 @@ yang ditampilkan ke peneliti pada Tahap 3.
 
 ---
 
-## 8. Keputusan Desain yang Terkunci
+## 9. Keputusan Desain yang Terkunci
 
-| # | Isu | Keputusan terpasang |
+| # | Isu | Keputusan |
 |---|---|---|
 | D1 | Tahap untuk status terminal | `tahapan()` mengembalikan `null` |
 | D2 | `unit_sekarang` | disimpan + index, di-sync `ProposalWorkflow::transition()` |
 | D3 | Kosakata unit | enum `Unit` = `penelitian\|kaji_etik\|reviewer` di semua tabel |
 | D4 | Jalan mundur | verifikasi pembayaran → menunggu pembayaran; verifikasi akhir → pelaksanaan; plus `Dibatalkan` dari semua status non-terminal |
-| D5 | Survey per proposal | `respon.proposal_id` + partial unique; gate unduh di `DocumentDownloadController` |
+| D5 | Survey per proposal | `respon.proposal_id` + partial unique; gate unduh di `DocumentDownloadController` lewat `sudahIsiSurvey()` |
 | D6 | Kode proposal | `RSPISS-YYYY-###`; kolom `tahun` + `nomor` dengan `unique(tahun, nomor)`, dijaga `pg_advisory_xact_lock` |
+| D7 | Pemisahan CRU/KEPK | **satu pengajuan, dua berkas kerja**: satu `proposal` dengan satu rantai status; data & keputusan tiap unit di tabel `cru_*` / `kepk_*` sendiri |
+| D8 | Schema | dua schema — `public` untuk tabel bawaan, `rspi` untuk seluruh domain. Kelompok CRU/KEPK dinyatakan **prefiks nama tabel**, bukan schema, jadi batasnya tidak bisa ditegakkan `GRANT` |
+| D9 | Kerahasiaan telaah | berkas & komentar telaah di tabel `kepk_*` terpisah dengan route unduh sendiri — bukan disaring dari tabel bersama |
+| D10 | 1:1 | ditegakkan database lewat *partial unique* `where deleted_at is null`, bukan hanya konvensi aplikasi |
 
 ---
 

@@ -7,10 +7,10 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /** Penugasan reviewer oleh KEPK (bisa >1 reviewer per proposal). */
     public function up(): void
     {
-        // Penugasan reviewer oleh KEPK (bisa >1 reviewer per proposal).
-        Schema::create('proposal_reviewers', function (Blueprint $t) {
+        Schema::create('rspi.kepk_penugasan_reviewer', function (Blueprint $t) {
             $t->uuid('id')->primary();
             $t->uuid('proposal_id');
             $t->uuid('reviewer_id');
@@ -22,11 +22,11 @@ return new class extends Migration
             $t->index(['reviewer_id', 'status']);
         });
 
-        DB::statement('create unique index proposal_reviewers_unique on proposal_reviewers (proposal_id, reviewer_id) where deleted_at is null');
+        DB::statement('create unique index kepk_penugasan_reviewer_unique on rspi.kepk_penugasan_reviewer (proposal_id, reviewer_id) where deleted_at is null');
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('proposal_reviewers');
+        Schema::dropIfExists('rspi.kepk_penugasan_reviewer');
     }
 };

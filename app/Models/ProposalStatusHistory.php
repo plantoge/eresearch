@@ -16,7 +16,7 @@ class ProposalStatusHistory extends Model
 {
     use HasUuidAndAudit, SoftDeletes;
 
-    protected $table = 'proposal_status_history';
+    protected $table = 'rspi.proposal_status_history';
 
     public $incrementing = false;
 
