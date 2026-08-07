@@ -72,6 +72,8 @@ class SemuaHalamanRenderTest extends TestCase
             S::MenungguPresentasi,
             S::MenungguKelengkapanBerkasEtik,
             S::MenungguPenunjukanReviewer,
+            S::PerluRevisiBerkasEtik,        // KEPK kembalikan berkas
+            S::MenungguPenunjukanReviewer,   // peneliti kirim ulang
             S::MenungguReviewReviewer,
             S::DisetujuiReviewer,
             S::MenungguPembayaran,

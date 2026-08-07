@@ -52,7 +52,11 @@ class Show extends Component
     // Upload generik per aksi
     public $fileUpload;          // satu file (surat tanggapan/penolakan/izin/bukti bayar/revisi proposal)
 
-    public $fileEtik = [];       // form_kaji_etik, informed_consent, pks, kerahasiaan_data
+    public $fileEtik = [];       // form_kaji_etik, informed_consent, kerahasiaan_data
+
+    public $filePks;             // diunggah CRU, terpisah dari berkas etik peneliti
+
+    public $fileProposal;        // proposal ikut diperbaiki saat KEPK mengembalikan berkas
 
     public $fileLaporan;
 
@@ -109,7 +113,7 @@ class Show extends Component
     {
         app(ProposalWorkflow::class)->transition($this->proposal, $ke, $catatan ?: null);
         $this->proposal->refresh();
-        $this->reset('catatan', 'fileUpload', 'fileEtik', 'fileLaporan', 'fileRawData', 'fileBayarCru', 'fileBayarKepk');
+        $this->reset('catatan', 'fileUpload', 'fileEtik', 'fileProposal', 'fileLaporan', 'fileRawData', 'fileBayarCru', 'fileBayarKepk');
         $this->success("Status: {$ke->value}");
     }
 
@@ -152,21 +156,68 @@ class Show extends Component
         $this->pindah(ProposalStatus::MenungguPenunjukanReviewer, $this->catatan);
     }
 
+    /**
+     * Unggah ulang berkas etik yang diperbaiki — opsional per berkas.
+     * Dipakai dua jalur perbaikan yang berbeda maksudnya (kelengkapan vs telaah),
+     * jadi aturannya ditaruh di satu tempat supaya tidak melenceng sendiri-sendiri.
+     *
+     * Pesan error sengaja diserahkan ke pemanggil: syarat "minimal satu" berbeda
+     * antar jalur — yang satu boleh dipenuhi oleh berkas proposal.
+     *
+     * @return bool ada berkas etik yang benar-benar diunggah
+     */
+    protected function unggahUlangBerkasEtik(): bool
+    {
+        $ada = false;
+
+        foreach (DocumentType::wajibTahap2() as $jenis) {
+            if (! empty($this->fileEtik[$jenis->value])) {
+                $this->validate(["fileEtik.{$jenis->value}" => $jenis->aturanValidasi()]);
+                $this->simpanFile($jenis, $this->fileEtik[$jenis->value]);
+                $ada = true;
+            }
+        }
+
+        return $ada;
+    }
+
+    /**
+     * Perbaiki berkas yang dikembalikan KEPK — belum ada reviewer terlibat.
+     *
+     * Proposal ikut bisa diunggah ulang di sini: tim KEPK menelaah proposalnya juga,
+     * bukan hanya keempat berkas etik, jadi koreksi mereka bisa menyangkut proposal.
+     */
+    public function kirimPerbaikanBerkasEtik()
+    {
+        abort_unless($this->pemilik(), 403);
+
+        $adaProposal = false;
+
+        if ($this->fileProposal) {
+            $this->validate(['fileProposal' => DocumentType::Proposal->aturanValidasi()]);
+            $this->simpanFile(DocumentType::Proposal, $this->fileProposal);
+            $adaProposal = true;
+        }
+
+        $adaEtik = $this->unggahUlangBerkasEtik();
+
+        if (! $adaProposal && ! $adaEtik) {
+            $this->addError('fileEtik', 'Unggah minimal satu berkas — proposal atau berkas etik.');
+
+            return;
+        }
+
+        // Sengaja TIDAK memanggil resetPenugasanReviewer(): di titik ini KEPK belum
+        // menunjuk siapa pun, jadi tidak ada penugasan yang perlu di-reset.
+        $this->pindah(ProposalStatus::MenungguPenunjukanReviewer, $this->catatan);
+    }
+
     /** Perbaiki berkas etik sesuai komentar reviewer (loop, opsional per berkas). */
     public function kirimRevisiEtik()
     {
         abort_unless($this->pemilik(), 403);
 
-        $adaFile = false;
-        foreach (DocumentType::wajibTahap2() as $jenis) {
-            if (! empty($this->fileEtik[$jenis->value])) {
-                $this->validate(["fileEtik.{$jenis->value}" => $jenis->aturanValidasi()]);
-                $this->simpanFile($jenis, $this->fileEtik[$jenis->value]);
-                $adaFile = true;
-            }
-        }
-
-        if (! $adaFile) {
+        if (! $this->unggahUlangBerkasEtik()) {
             $this->addError('fileEtik', 'Unggah minimal satu berkas revisi.');
 
             return;
@@ -384,6 +435,25 @@ class Show extends Component
         $this->pindah(ProposalStatus::Dibatalkan, $this->catatan ?: 'Dibatalkan');
     }
 
+    /**
+     * CRU mengunggah Perjanjian Kerjasama, kapan saja dan tanpa mengubah status.
+     *
+     * PKS sengaja lepas dari alur: penerbitannya lama dan sering baru selesai
+     * setelah penelitiannya rampung, jadi mengikatnya ke suatu tahap akan
+     * membekukan proposal karena menunggu berkas yang belum tentu ada.
+     */
+    public function unggahPks()
+    {
+        abort_unless(auth()->user()->can('antrian-cru.update'), 403);
+        $this->validate(['filePks' => 'required|'.DocumentType::Pks->aturanValidasi()]);
+
+        $this->simpanFile(DocumentType::Pks, $this->filePks);
+
+        $this->proposal->refresh();
+        $this->reset('filePks');
+        $this->success('PKS tersimpan.');
+    }
+
     // ============ Aksi Reviewer (jawaban ke KEPK, bukan ke peneliti) ============
 
     public function reviewerMintaRevisi()
@@ -429,6 +499,26 @@ class Show extends Component
         $this->proposal->refresh();
         $this->reset('catatan', 'reviewerTerpilih');
         $this->success('Reviewer ditugaskan.');
+    }
+
+    /**
+     * KEPK mengembalikan berkas etik yang kurang/salah SEBELUM reviewer dilibatkan.
+     *
+     * Beda maksud dari kepkTeruskanRevisi(): yang itu meneruskan masukan reviewer,
+     * yang ini soal kelengkapan berkas — dan tanpa jalur ini, satu berkas salah
+     * memaksa KEPK memilih antara meneruskan berkas cacat atau menolak permanen.
+     */
+    public function kepkMintaRevisiBerkas()
+    {
+        abort_unless(auth()->user()->can('kaji-etik.update'), 403);
+        $this->validate(['catatan' => 'required|string'], [], ['catatan' => 'catatan perbaikan berkas']);
+
+        if ($this->fileUpload) {
+            $this->validate(['fileUpload' => DocumentType::SuratTanggapan->aturanValidasi()]);
+            $this->simpanFile(DocumentType::SuratTanggapan, $this->fileUpload);
+        }
+
+        $this->pindah(ProposalStatus::PerluRevisiBerkasEtik, $this->catatan);
     }
 
     /**

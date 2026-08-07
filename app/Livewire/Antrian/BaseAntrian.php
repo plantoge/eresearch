@@ -58,7 +58,8 @@ abstract class BaseAntrian extends Component
                 ->where('kode', 'ilike', "%{$this->cari}%")
                 ->orWhere('judul_penelitian', 'ilike', "%{$this->cari}%")
                 ->orWhere('peneliti_utama', 'ilike', "%{$this->cari}%")))
-            ->orderBy('updated_at', $riwayat ? 'desc' : 'asc');
+            // Terbaru selalu di atas, di kedua tab.
+            ->orderByDesc('updated_at');
 
         $total = (clone $query)->count();
         $proposals = $query->take($this->perPage)->get();

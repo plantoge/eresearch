@@ -15,8 +15,10 @@
 Aplikasi berjalan penuh untuk alur 4 tahap.
 
 **Struktur database sudah dipisah per kelompok CRU & KEPK** (schema `rspi`, 5 tabel baru,
-2 tabel di-rename). Verifikasi terakhir: **`artisan test` → 53 lulus, 121 assertion**, berjalan
-di PostgreSQL (`cru_test`) — bukan lagi sqlite in-memory.
+2 tabel di-rename), **Tahap 2 mendapat langkah verifikasi berkas etik oleh KEPK** yang
+sebelumnya tidak ada, dan **PKS dipindah dari berkas wajib Tahap 2 menjadi unggahan CRU**
+yang lepas dari alur. Verifikasi terakhir: **`artisan test` → 72 lulus, 180 assertion**,
+berjalan di PostgreSQL (`cru_test`) — bukan lagi sqlite in-memory.
 
 **DB kerja `cru` sudah di-migrate** (`migrate:fresh --seed`, 7 Agustus 2026) dan diverifikasi
 read-only: 14 tabel di `public`, 17 di `rspi`, 7 partial unique index, dan keempat kolom yang
@@ -28,17 +30,18 @@ Cadangan struktur & data lama sebelum migrasi: `C:\Users\arsip\cru-backup-2026-0
 
 `SemuaHalamanRenderTest` menutup lubang lama: Dashboard, Laporan, Audit Log, Antrian, dan
 daftar Proposal sebelumnya **tidak punya tes sama sekali**, padahal pemisahan ini menyentuh
-hampir semua model. Sekarang ke-14 halaman dirender, plus halaman proposal di ke-12 status.
+hampir semua model. Sekarang ke-14 halaman dirender, plus halaman proposal di ke-13 status.
 
 | Bagian | Status |
 |---|---|
 | Fondasi: Laravel 12, Livewire 3, Mary UI + daisyUI, spatie/permission, UUIDv7 + audit columns | ✅ |
 | Domain inti: 7 enum, 14 migration, `ProposalWorkflow` sebagai pintu tunggal transisi | ✅ |
-| Pemisahan struktur CRU & KEPK (schema `rspi`, berkas kerja per unit) | ✅ kode + tes lulus; ⏳ DB kerja `cru` belum di-migrate |
+| Pemisahan struktur CRU & KEPK (schema `rspi`, berkas kerja per unit) | ✅ terpasang di DB kerja |
 | RBAC & menu dinamis: 9 role, 12 menu, 48 permission, sinkronisasi menu→permission otomatis | ✅ |
 | Auth: login, registrasi, lupa/reset password, math captcha, layout + sidebar dinamis | ✅ |
 | Tahap 1 (CRU): revisi, presentasi, tolak, loloskan | ✅ |
-| Tahap 2 (KEPK + Reviewer): berkas etik, penunjukan reviewer, loop ronde, ACC, lanjut/tolak | ✅ |
+| PKS: diunggah CRU kapan saja, lepas dari alur (bukan lagi syarat Tahap 2) | ✅ |
+| Tahap 2 (KEPK + Reviewer): **3** berkas etik, **verifikasi kelengkapan oleh KEPK + minta revisi**, penunjukan reviewer, loop ronde, ACC, lanjut/tolak | ✅ |
 | Tahap 3: dua bukti bayar + verifikasi/tolak, info rekening dari master kontak | ✅ |
 | Tahap 4: draft izin, laporan + raw data, izin final, **gate survey** | ✅ |
 | Penyimpanan file di luar folder aplikasi (disk `dokumen`, privat) | ✅ |
@@ -63,6 +66,15 @@ mengerjakan tanpa menebak:
 ---
 
 ## 3. Belum Dikerjakan
+
+### Pemantauan PKS yang belum terbit
+**Kenapa:** sejak PKS dilepas dari syarat Tahap 2, **tidak ada apa pun yang memaksa PKS pernah
+diunggah** — proposal bisa `Selesai` tanpa PKS dan tak seorang pun diingatkan. Itu memang
+konsekuensi yang diterima (penerbitannya lama), tapi berarti kelalaian jadi tidak terlihat.
+**Kondisi selesai:** CRU punya cara melihat proposal mana yang belum ada PKS-nya — mis. filter
+di antrian CRU atau angka di dashboard.
+**Catatan:** datanya sudah ada, tinggal query: `proposal` yang tidak punya baris
+`proposal_documents` ber-`jenis = 'pks'`. Tidak butuh kolom atau tabel baru.
 
 ### Buang spec kerja pemisahan CRU/KEPK
 **Kenapa:** `.claude/specs/2026-08-07-pemisahan-cru-kepk.md` adalah spec sementara; strukturnya

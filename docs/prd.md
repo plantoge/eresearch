@@ -91,12 +91,15 @@ flowchart TD
     subgraph T2["Tahap 2 — Kaji Etik (KEPK perantara + Reviewer)"]
         MKBE["Menunggu Kelengkapan Berkas Etik"]
         MPR["Menunggu Penunjukan Reviewer"]
+        PRBE["Perlu Revisi Berkas Etik"]
         MRR["Menunggu Review Reviewer"]
         PRR["Perlu Revisi Reviewer"]
         DR["Disetujui Reviewer"]
 
-        MKBE -->|peneliti lengkapi 4 berkas etik| MPR
-        MPR -->|KEPK tunjuk min. 1 reviewer| MRR
+        MKBE -->|peneliti lengkapi 3 berkas etik| MPR
+        MPR -->|KEPK: berkas kurang atau salah| PRBE
+        PRBE -->|peneliti unggah ulang berkas| MPR
+        MPR -->|KEPK: berkas lengkap, tunjuk min. 1 reviewer| MRR
         MRR -->|KEPK teruskan masukan reviewer| PRR
         PRR -->|peneliti revisi: ronde baru semua reviewer| MRR
         MRR -->|SEMUA reviewer ACC - otomatis| DR
@@ -146,15 +149,30 @@ sengaja tidak digambar bergaris karena bisa dicapai dari status non-terminal man
    hanya demi meloloskan. Presentasi kedua tetap mungkin bila memang diperlukan.
 
 ### Tahap 2 — Kaji Etik *(KEPK sebagai perantara + Reviewer)*
-1. Peneliti melengkapi **4 berkas etik wajib**: form kaji etik, informed consent, PKS,
+1. Peneliti melengkapi **3 berkas etik wajib**: form kaji etik, informed consent,
    kerahasiaan data → bola pindah ke KEPK.
-2. KEPK **menunjuk minimal 1 reviewer** (boleh lebih). Proposal masuk antrian tiap reviewer.
-3. Reviewer menelaah lalu memberi **komentar + opsional file tanggapan + ACC / minta revisi**.
+
+   > **PKS tidak termasuk di sini.** Penerbitannya lama dan sering baru selesai setelah
+   > penelitiannya sendiri rampung, jadi menahannya sebagai syarat Tahap 2 membekukan
+   > proposal karena menunggu berkas yang belum tentu ada. PKS diunggah **CRU**, kapan
+   > saja, lewat kartu tersendiri di halaman proposal — tanpa mengubah status.
+2. **KEPK memverifikasi kelengkapan berkas lebih dulu.** Bila ada yang kurang atau salah,
+   KEPK mengembalikannya dengan **catatan wajib** (opsional + surat tanggapan) → status
+   `Perlu Revisi Berkas Etik`, bola kembali ke peneliti. Peneliti mengunggah ulang yang
+   perlu diperbaiki saja — **termasuk berkas `proposal`**, karena tim KEPK menelaah
+   proposalnya juga, bukan hanya berkas etik. Bolak-balik ini boleh berulang, dan
+   penugasan reviewer **tidak** tersentuh karena belum ada reviewer yang ditunjuk.
+3. Setelah berkas dinilai lengkap, KEPK **menunjuk minimal 1 reviewer** (boleh lebih).
+   Proposal masuk antrian tiap reviewer.
+4. Reviewer menelaah lalu memberi **komentar + opsional file tanggapan + ACC / minta revisi**.
    Jawaban ini **masuk ke KEPK, bukan ke peneliti**.
-4. KEPK meneruskan intinya ke peneliti (identitas & komentar asli reviewer dirahasiakan).
+5. KEPK meneruskan intinya ke peneliti (identitas & komentar asli reviewer dirahasiakan).
    Peneliti merevisi → **semua penugasan reviewer di-reset ke ronde baru**; loop bisa >1×.
-5. Begitu **semua** reviewer ACC, status otomatis menjadi `Disetujui Reviewer`; KEPK lalu
+6. Begitu **semua** reviewer ACC, status otomatis menjadi `Disetujui Reviewer`; KEPK lalu
    meloloskan ke Tahap 3 atau menolak secara etik.
+
+> Langkah 2 dan langkah 5 mudah tertukar. Langkah 2 soal **kelengkapan berkas** dan terjadi
+> sebelum reviewer dilibatkan; langkah 5 soal **substansi telaah** dan datang dari reviewer.
 
 ### Tahap 3 — Administrasi Pembayaran *(CRU)*
 Peneliti melakukan **dua pembayaran terpisah** — ke CRU dan ke KEPK — lalu mengunggah
@@ -171,7 +189,7 @@ Nomor rekening & rincian biaya diambil dari master **Informasi Kontak**.
 
 ## 4. Status, Tahap, dan Unit
 
-18 nilai status. Tahap dan unit **tidak disimpan sebagai keputusan terpisah** — keduanya
+19 nilai status. Tahap dan unit **tidak disimpan sebagai keputusan terpisah** — keduanya
 diturunkan dari status (`ProposalStatus::tahapan()` dan `::unit()`). `unit_sekarang` disimpan
 di tabel hanya sebagai materialisasi agar antrian bisa di-index.
 
@@ -182,19 +200,24 @@ di tabel hanya sebagai materialisasi agar antrian bisa di-index.
 | 3 | `Menunggu Verifikasi Revisi` | 1 | penelitian | CRU | peneliti kirim revisi |
 | 4 | `Menunggu Presentasi` | 1 | penelitian | Peneliti | CRU jadwalkan presentasi |
 | 5 | `Menunggu Kelengkapan Berkas Etik` | 2 | kaji_etik | Peneliti | CRU loloskan |
-| 6 | `Menunggu Penunjukan Reviewer` | 2 | kaji_etik | KEPK | peneliti lengkapi berkas etik |
-| 7 | `Menunggu Review Reviewer` | 2 | reviewer | Reviewer (semua yang ditugaskan) | KEPK tunjuk reviewer |
-| 8 | `Perlu Revisi Reviewer` | 2 | kaji_etik | Peneliti | KEPK teruskan masukan reviewer |
-| 9 | `Disetujui Reviewer` | 2 | kaji_etik | KEPK | **semua** reviewer ACC (otomatis) |
-| 10 | `Menunggu Pembayaran` | 3 | penelitian | Peneliti | KEPK lanjutkan |
-| 11 | `Menunggu Verifikasi Pembayaran` | 3 | penelitian | CRU | peneliti unggah 2 bukti bayar |
-| 12 | `Pelaksanaan Penelitian` | 4 | penelitian | Peneliti | CRU terbitkan draft izin |
-| 13 | `Menunggu Verifikasi Akhir` | 4 | penelitian | CRU | peneliti unggah laporan + raw data |
-| 14 | `Menunggu Survey Kepuasan` | 4 | penelitian | Peneliti | CRU terbitkan izin final |
-| 15 | `Selesai` | — | — | — | peneliti isi survey *(terminal)* |
-| 16 | `Ditolak` | — | penelitian | — | CRU tolak *(terminal)* |
-| 17 | `Ditolak Kaji Etik` | — | kaji_etik | — | KEPK tolak *(terminal)* |
-| 18 | `Dibatalkan` | — | — | — | CRU batalkan dari status non-terminal mana pun *(terminal)* |
+| 6 | `Menunggu Penunjukan Reviewer` | 2 | kaji_etik | KEPK | peneliti lengkapi/perbaiki berkas etik |
+| 7 | `Perlu Revisi Berkas Etik` | 2 | kaji_etik | Peneliti | KEPK kembalikan berkas yang kurang |
+| 8 | `Menunggu Review Reviewer` | 2 | reviewer | Reviewer (semua yang ditugaskan) | KEPK tunjuk reviewer |
+| 9 | `Perlu Revisi Reviewer` | 2 | kaji_etik | Peneliti | KEPK teruskan masukan reviewer |
+| 10 | `Disetujui Reviewer` | 2 | kaji_etik | KEPK | **semua** reviewer ACC (otomatis) |
+| 11 | `Menunggu Pembayaran` | 3 | penelitian | Peneliti | KEPK lanjutkan |
+| 12 | `Menunggu Verifikasi Pembayaran` | 3 | penelitian | CRU | peneliti unggah 2 bukti bayar |
+| 13 | `Pelaksanaan Penelitian` | 4 | penelitian | Peneliti | CRU terbitkan draft izin |
+| 14 | `Menunggu Verifikasi Akhir` | 4 | penelitian | CRU | peneliti unggah laporan + raw data |
+| 15 | `Menunggu Survey Kepuasan` | 4 | penelitian | Peneliti | CRU terbitkan izin final |
+| 16 | `Selesai` | — | — | — | peneliti isi survey *(terminal)* |
+| 17 | `Ditolak` | — | penelitian | — | CRU tolak *(terminal)* |
+| 18 | `Ditolak Kaji Etik` | — | kaji_etik | — | KEPK tolak *(terminal)* |
+| 19 | `Dibatalkan` | — | — | — | CRU batalkan dari status non-terminal mana pun *(terminal)* |
+
+**Perlu Revisi Berkas Etik hanya bisa maju** kembali ke `Menunggu Penunjukan Reviewer` —
+tidak ada jalan langsung ke `Ditolak Kaji Etik`. Penolakan etik diambil setelah berkas
+perbaikan masuk, bukan saat bola masih di tangan peneliti. (`Dibatalkan` tetap tersedia.)
 
 Transisi yang sah dikunci di `ProposalStatus::allowedNext()`; percobaan meloncat ditolak 403
 oleh `ProposalWorkflow::transition()`. Daftar transisi lengkap ada di [skema.md](skema.md#4-enum).
@@ -211,8 +234,11 @@ oleh `ProposalWorkflow::transition()`. Daftar transisi lengkap ada di [skema.md]
 | Jadwalkan → `Menunggu Presentasi` | CRU | tanggal, kategori, media presentasi |
 | Tolak → `Ditolak` | CRU | `surat_penolakan` (wajib) |
 | Loloskan → `Menunggu Kelengkapan Berkas Etik` | CRU | catatan (opsional). Tersedia dari `Menunggu Presentasi` **maupun** `Menunggu Verifikasi Revisi` |
-| Lengkapi etik → `Menunggu Penunjukan Reviewer` | Peneliti | **form_kaji_etik**, **informed_consent**, **pks**, **kerahasiaan_data** (semua wajib) |
-| Tunjuk reviewer → `Menunggu Review Reviewer` | KEPK | pilih ≥1 user ber-role reviewer |
+| Lengkapi etik → `Menunggu Penunjukan Reviewer` | Peneliti | **form_kaji_etik**, **informed_consent**, **kerahasiaan_data** (semua wajib) |
+| Unggah PKS *(status tetap)* | CRU | `pks` — kapan saja, termasuk setelah proposal `Selesai`. Tidak menahan tahap mana pun |
+| Kembalikan berkas → `Perlu Revisi Berkas Etik` | KEPK | catatan **wajib** (sebutkan berkas mana yang salah); opsional `surat_tanggapan` |
+| Perbaiki berkas → `Menunggu Penunjukan Reviewer` | Peneliti | unggah ulang **≥1** dari 3 berkas etik **atau `proposal`** — tim KEPK menelaah proposalnya juga, jadi koreksi bisa menyangkut proposal |
+| Tunjuk reviewer → `Menunggu Review Reviewer` | KEPK | pilih ≥1 user ber-role reviewer. Hanya setelah berkas dinilai lengkap |
 | Tanggapan reviewer *(status tetap)* | Reviewer | komentar (wajib bila minta revisi) + opsional berkas telaah (`kepk_dokumen_telaah`) + ACC/revisi |
 | Teruskan revisi → `Perlu Revisi Reviewer` | KEPK | catatan untuk peneliti (wajib); opsional `surat_tanggapan`. Hanya aktif bila ada reviewer yang meminta revisi |
 | Kirim revisi etik → `Menunggu Review Reviewer` | Peneliti | re-upload ≥1 berkas etik; semua penugasan reviewer reset |

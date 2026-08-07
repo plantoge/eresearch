@@ -12,8 +12,12 @@ enum DocumentType: string
     // Tahap 2
     case FormKajiEtik = 'form_kaji_etik';
     case InformedConsent = 'informed_consent';
-    case Pks = 'pks';
     case KerahasiaanData = 'kerahasiaan_data';
+    // PKS TIDAK ada di sini walau namanya berbau Tahap 2. Penerbitannya lama —
+    // sering baru selesai setelah penelitiannya sendiri rampung — jadi menahannya
+    // sebagai syarat Tahap 2 akan membekukan proposal tanpa alasan. Diunggah CRU
+    // kapan saja lewat kartu tersendiri di halaman proposal.
+    case Pks = 'pks';
     // Tahap 3 — pembayaran terpisah ke CRU & KEPK
     case BuktiBayarCru = 'bukti_bayar_cru';
     case BuktiBayarKepk = 'bukti_bayar_kepk';
@@ -66,7 +70,7 @@ enum DocumentType: string
     /** @return self[] */
     public static function wajibTahap2(): array
     {
-        return [self::FormKajiEtik, self::InformedConsent, self::Pks, self::KerahasiaanData];
+        return [self::FormKajiEtik, self::InformedConsent, self::KerahasiaanData];
     }
 
     /** Aturan validasi upload Livewire (prd §7c). */
@@ -79,12 +83,40 @@ enum DocumentType: string
         };
     }
 
+    /** Teks bantuan format & ukuran untuk input unggah, mis. "PDF · maks 10 MB". */
+    public function hintUnggah(): string
+    {
+        return self::hintDariAturan($this->aturanValidasi());
+    }
+
+    /**
+     * Diturunkan dari aturan validasinya sendiri, bukan ditulis ulang — supaya
+     * angka di layar tidak pernah berbeda dari angka yang benar-benar ditegakkan.
+     */
+    public static function hintDariAturan(string $aturan): string
+    {
+        preg_match('/mimes:([a-z0-9,]+)/i', $aturan, $format);
+        preg_match('/max:(\d+)/', $aturan, $maks);
+
+        $bagian = [];
+
+        if (isset($format[1])) {
+            $bagian[] = strtoupper(str_replace(',', '/', $format[1]));
+        }
+
+        if (isset($maks[1])) {
+            $bagian[] = 'maks '.round((int) $maks[1] / 1024).' MB';
+        }
+
+        return implode(' · ', $bagian);
+    }
+
     /** Dokumen ini di-upload oleh admin (bukan peneliti). */
     public function milikAdmin(): bool
     {
         return in_array($this, [
             self::IzinDraft, self::IzinFinal, self::SuratPenolakan,
-            self::SuratTanggapan,
+            self::SuratTanggapan, self::Pks,
         ], true);
     }
 }

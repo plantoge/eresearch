@@ -1,3 +1,4 @@
+@php use App\Enums\DocumentType; @endphp
 <div>
     <x-mary-header title="Ajukan Proposal Baru" subtitle="Tahap 1 — berkas awal" separator />
 
@@ -7,10 +8,14 @@
             <x-mary-textarea label="Tim peneliti" wire:model="tim_peneliti" hint="Pisahkan dengan koma" rows="2" />
             <x-mary-textarea label="Judul penelitian" wire:model="judul_penelitian" rows="3" required />
 
-            <x-mary-file label="Surat pengantar (PDF, wajib)" wire:model="surat_pengantar" accept="application/pdf" required />
-            <x-mary-file label="Proposal penelitian (PDF, wajib)" wire:model="proposal_penelitian" accept="application/pdf" required />
-            <x-mary-file label="Kaji etik (PDF, opsional)" wire:model="kaji_etik" accept="application/pdf" />
-            <x-mary-file label="Sertifikat GCP (PDF, opsional)" wire:model="sertifikat_gcp" accept="application/pdf" />
+            <x-mary-file label="Surat pengantar (wajib)" :hint="DocumentType::SuratPengantar->hintUnggah()"
+                wire:model="surat_pengantar" accept="application/pdf" required />
+            <x-mary-file label="Proposal penelitian (wajib)" :hint="DocumentType::Proposal->hintUnggah()"
+                wire:model="proposal_penelitian" accept="application/pdf" required />
+            <x-mary-file label="Kaji etik (opsional)" :hint="DocumentType::KajiEtik->hintUnggah()"
+                wire:model="kaji_etik" accept="application/pdf" />
+            <x-mary-file label="Sertifikat GCP (opsional)" :hint="DocumentType::SertifikatGcp->hintUnggah()"
+                wire:model="sertifikat_gcp" accept="application/pdf" />
 
             <x-slot:actions>
                 <x-mary-button label="Batal" link="{{ route('proposal.index') }}" class="btn-ghost" />

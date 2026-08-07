@@ -84,7 +84,7 @@ class Users extends Component
             ->when($this->cari, fn ($q) => $q->where(fn ($w) => $w
                 ->where('name', 'ilike', "%{$this->cari}%")
                 ->orWhere('email', 'ilike', "%{$this->cari}%")))
-            ->orderBy('name')
+            ->latest()
             ->paginate(15);
 
         return view('livewire.admin.users', [

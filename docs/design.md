@@ -152,8 +152,12 @@ Label error bahasa Indonesia lewat argumen ketiga `validate()` (mis. `['catatan'
    buat pengecekan sendiri. Di riwayat status yang dilihat peneliti, pelaku ditulis "Reviewer".
    `$dokumen` tidak perlu disaring lagi: berkas telaah ada di tabel `kepk_dokumen_telaah`
    dengan route unduh sendiri, jadi tidak pernah ikut terbawa ke daftar dokumen peneliti.
-3. **Bahasa Indonesia** untuk semua label, tombol, pesan kosong, dan pesan error.
-4. **Tanpa JS/CDN eksternal.** Interaksi memakai Livewire + Alpine yang sudah ada
+3. **Setiap `x-mary-file` wajib punya `hint`** berisi format & ukuran maksimal, diambil dari
+   `DocumentType::hintUnggah()` — jangan mengetik "PDF, maks 10 MB" langsung di view, karena
+   itulah yang membuat teks dan aturan validasi melenceng.
+4. **Daftar data ditampilkan terbaru di atas** (antrian, proposal, audit log, users).
+5. **Bahasa Indonesia** untuk semua label, tombol, pesan kosong, dan pesan error.
+6. **Tanpa JS/CDN eksternal.** Interaksi memakai Livewire + Alpine yang sudah ada
    (`wire:model.live.debounce`, `wire:click`, `x-intersect`). Tidak ada script dari luar.
 
 ---

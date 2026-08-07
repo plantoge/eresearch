@@ -45,6 +45,7 @@ class ProposalSampleSeeder extends Seeder
             S::MenungguPresentasi->value => 5,
             S::MenungguKelengkapanBerkasEtik->value => 5,
             S::MenungguPenunjukanReviewer->value => 6,
+            S::PerluRevisiBerkasEtik->value => 4,
             S::MenungguReviewReviewer->value => 8,
             S::DisetujuiReviewer->value => 4,
             S::MenungguPembayaran->value => 3,
@@ -103,7 +104,11 @@ class ProposalSampleSeeder extends Seeder
                     Auth::login($peneliti);
                     $wf->transition($p, S::MenungguPenunjukanReviewer);
 
-                    if ($target !== S::MenungguPenunjukanReviewer) {
+                    if ($target === S::PerluRevisiBerkasEtik) {
+                        // KEPK mengembalikan berkas sebelum reviewer dilibatkan
+                        Auth::login($kepk);
+                        $wf->transition($p, S::PerluRevisiBerkasEtik, 'Sampel: PKS belum ditandatangani direktur');
+                    } elseif ($target !== S::MenungguPenunjukanReviewer) {
                         Auth::login($kepk);
                         $wf->tugaskanReviewer($p, $reviewers->pluck('id')->all());
 

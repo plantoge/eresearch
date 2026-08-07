@@ -11,6 +11,7 @@ enum ProposalStatus: string
     case Ditolak = 'Ditolak';
     case MenungguKelengkapanBerkasEtik = 'Menunggu Kelengkapan Berkas Etik';
     case MenungguPenunjukanReviewer = 'Menunggu Penunjukan Reviewer';
+    case PerluRevisiBerkasEtik = 'Perlu Revisi Berkas Etik';
     case MenungguReviewReviewer = 'Menunggu Review Reviewer';
     case PerluRevisiReviewer = 'Perlu Revisi Reviewer';
     case DisetujuiReviewer = 'Disetujui Reviewer';
@@ -30,8 +31,8 @@ enum ProposalStatus: string
             self::MenungguVerifikasiBerkas, self::PerluRevisiProposal,
             self::MenungguVerifikasiRevisi, self::MenungguPresentasi => 1,
             self::MenungguKelengkapanBerkasEtik, self::MenungguPenunjukanReviewer,
-            self::MenungguReviewReviewer, self::PerluRevisiReviewer,
-            self::DisetujuiReviewer => 2,
+            self::PerluRevisiBerkasEtik, self::MenungguReviewReviewer,
+            self::PerluRevisiReviewer, self::DisetujuiReviewer => 2,
             self::MenungguPembayaran, self::MenungguVerifikasiPembayaran => 3,
             self::PelaksanaanPenelitian, self::MenungguVerifikasiAkhir,
             self::MenungguSurveyKepuasan => 4,
@@ -45,8 +46,8 @@ enum ProposalStatus: string
         return match ($this) {
             self::MenungguReviewReviewer => Unit::Reviewer,
             self::MenungguKelengkapanBerkasEtik, self::MenungguPenunjukanReviewer,
-            self::PerluRevisiReviewer, self::DisetujuiReviewer,
-            self::DitolakKajiEtik => Unit::KajiEtik,
+            self::PerluRevisiBerkasEtik, self::PerluRevisiReviewer,
+            self::DisetujuiReviewer, self::DitolakKajiEtik => Unit::KajiEtik,
             self::Selesai, self::Dibatalkan => null,
             default => Unit::Penelitian,
         };
@@ -72,7 +73,13 @@ enum ProposalStatus: string
             // Tahap 2 (KEPK + Reviewer) — KEPK perantara: tunjuk reviewer,
             // terima jawaban reviewer, teruskan revisi ke peneliti.
             self::MenungguKelengkapanBerkasEtik => [self::MenungguPenunjukanReviewer, self::DitolakKajiEtik],
-            self::MenungguPenunjukanReviewer => [self::MenungguReviewReviewer, self::DitolakKajiEtik],
+            // KEPK memverifikasi kelengkapan berkas SEBELUM menunjuk reviewer. Tanpa
+            // cabang revisi ini, satu berkas salah memaksa KEPK memilih antara
+            // meneruskan berkas cacat ke reviewer atau menolak etik secara permanen.
+            self::MenungguPenunjukanReviewer => [self::PerluRevisiBerkasEtik, self::MenungguReviewReviewer, self::DitolakKajiEtik],
+            // Hanya bisa maju — sama seperti PerluRevisiReviewer. Penolakan etik
+            // diambil setelah berkas perbaikan masuk, bukan saat menunggu peneliti.
+            self::PerluRevisiBerkasEtik => [self::MenungguPenunjukanReviewer],
             self::MenungguReviewReviewer => [self::PerluRevisiReviewer, self::DisetujuiReviewer, self::DitolakKajiEtik],
             self::PerluRevisiReviewer => [self::MenungguReviewReviewer],
             self::DisetujuiReviewer => [self::MenungguPembayaran, self::DitolakKajiEtik],
@@ -108,7 +115,8 @@ enum ProposalStatus: string
         return match ($this) {
             self::Selesai => 'badge-success',
             self::Ditolak, self::DitolakKajiEtik, self::Dibatalkan => 'badge-error',
-            self::PerluRevisiProposal, self::PerluRevisiReviewer => 'badge-warning',
+            self::PerluRevisiProposal, self::PerluRevisiBerkasEtik,
+            self::PerluRevisiReviewer => 'badge-warning',
             self::PelaksanaanPenelitian, self::DisetujuiReviewer => 'badge-info',
             default => 'badge-neutral',
         };
@@ -121,6 +129,7 @@ enum ProposalStatus: string
             self::PerluRevisiProposal,
             self::MenungguPresentasi,
             self::MenungguKelengkapanBerkasEtik,
+            self::PerluRevisiBerkasEtik,
             self::PerluRevisiReviewer,
             self::MenungguPembayaran,
             self::PelaksanaanPenelitian,

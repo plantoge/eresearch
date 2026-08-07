@@ -311,7 +311,7 @@ unit. Lupa memfilter jadi tidak mungkin, bukan sekadar belum pernah terjadi.
 
 Semua nilai disimpan sebagai string di kolom `varchar`, di-cast lewat `$casts` model.
 
-### `App\Enums\ProposalStatus` (18 nilai)
+### `App\Enums\ProposalStatus` (19 nilai)
 
 Daftar nilai, tahap, dan unit ada di [prd.md §4](prd.md#4-status-tahap-dan-unit). Peta
 transisi yang sah (`allowedNext()`):
@@ -323,7 +323,8 @@ transisi yang sah (`allowedNext()`):
 | `Menunggu Verifikasi Revisi` | `Menunggu Kelengkapan Berkas Etik` *(loloskan tanpa presentasi ulang)*, `Perlu Revisi Proposal`, `Menunggu Presentasi`, `Ditolak` |
 | `Menunggu Presentasi` | `Menunggu Kelengkapan Berkas Etik`, `Perlu Revisi Proposal`, `Ditolak` |
 | `Menunggu Kelengkapan Berkas Etik` | `Menunggu Penunjukan Reviewer`, `Ditolak Kaji Etik` |
-| `Menunggu Penunjukan Reviewer` | `Menunggu Review Reviewer`, `Ditolak Kaji Etik` |
+| `Menunggu Penunjukan Reviewer` | `Perlu Revisi Berkas Etik` *(berkas kurang)*, `Menunggu Review Reviewer`, `Ditolak Kaji Etik` |
+| `Perlu Revisi Berkas Etik` | `Menunggu Penunjukan Reviewer` *(hanya maju)* |
 | `Menunggu Review Reviewer` | `Perlu Revisi Reviewer`, `Disetujui Reviewer`, `Ditolak Kaji Etik` |
 | `Perlu Revisi Reviewer` | `Menunggu Review Reviewer` |
 | `Disetujui Reviewer` | `Menunggu Pembayaran`, `Ditolak Kaji Etik` |
@@ -345,15 +346,25 @@ Helper lain di enum ini: `tahapan()` (1–4, `null` untuk terminal) · `unit()` 
 | Kelompok | Nilai |
 |---|---|
 | Tahap 1 | `surat_pengantar`, `proposal` *(wajib)*; `kaji_etik`, `sertifikat_gcp` *(opsional)* |
-| Tahap 2 | `form_kaji_etik`, `informed_consent`, `pks`, `kerahasiaan_data` *(semua wajib)* |
+| Tahap 2 | `form_kaji_etik`, `informed_consent`, `kerahasiaan_data` *(semua wajib)* |
 | Tahap 3 | `bukti_bayar_cru`, `bukti_bayar_kepk` *(keduanya wajib)* |
 | Tahap 4 | `laporan_penelitian`, `raw_data` |
 | Output admin | `izin_draft`, `izin_final`, `surat_penolakan`, `surat_tanggapan` |
+| Lepas dari alur | `pks` — diunggah **CRU** kapan saja, termasuk setelah proposal `Selesai` |
 
 Helper: `label()` · `wajibTahap1()` / `opsionalTahap1()` / `wajibTahap2()` ·
-`aturanValidasi()` (aturan upload Livewire) · `milikAdmin()`.
+`aturanValidasi()` (aturan upload Livewire) · `milikAdmin()` · `hintUnggah()`.
+
+`hintUnggah()` menghasilkan teks seperti `PDF · maks 10 MB` untuk atribut `hint` di setiap
+`x-mary-file`, **diturunkan dari `aturanValidasi()` lewat `hintDariAturan()`** — bukan ditulis
+ulang di view. Angka di layar karena itu tidak pernah bisa berbeda dari angka yang ditegakkan.
 
 Tidak ada lagi nilai `tanggapan_reviewer` — berkas itu punya tabelnya sendiri (§5).
+
+`pks` **sengaja tidak masuk `wajibTahap2()`.** Penerbitannya lama dan sering baru selesai
+setelah penelitiannya rampung; sebagai syarat Tahap 2 ia membekukan proposal karena menunggu
+berkas yang belum tentu ada. Yang mengunggah CRU (`milikAdmin()` = true), lewat
+`Show::unggahPks()` yang tidak menyentuh status sama sekali.
 
 ### `App\Enums\Unit` (3 nilai)
 `penelitian` (CRU) · `kaji_etik` (KEPK) · `reviewer`. Kosakata yang sama dipakai di
