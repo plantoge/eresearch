@@ -410,7 +410,7 @@ worker mode:**
 |---|---|
 | `Proposal/Index.php`, `Antrian/BaseAntrian.php` (`render()`) | `count()` penuh **tiap render**, termasuk tiap ketikan pencarian |
 | idem | `ilike '%kata%'` — wildcard di depan, index B-tree tidak terpakai → seq scan |
-| `BaseAntrian::render()` | `orderBy('updated_at')` padahal index hanya di `unit_sekarang`, `status`, `user_id` |
+| `BaseAntrian::render()` | `orderByDesc('updated_at')` padahal index hanya di `unit_sekarang`, `status`, `user_id`. Berlaku di **kedua** tab sekarang — dulu tab Antrian `asc` |
 | `BaseAntrian::riwayatQuery()` | `whereHas('statusHistory')` — subquery EXISTS per render |
 
 Perbaikannya di ranah database (index trigram/GIN untuk pencarian, index `updated_at`, buang

@@ -130,12 +130,23 @@ Acuan: `livewire/proposal/show.blade.php` + `app/Livewire/Proposal/Show.php`.
 - Umpan balik pakai toast Mary (`use Mary\Traits\Toast;` → `$this->success("Status: ...")`),
   bukan alert manual.
 - Konfirmasi aksi berat pakai `x-mary-modal`.
+- **Urutan kartu mengikuti mendesaknya.** Kartu yang menuntut keputusan sekarang (aksi peneliti,
+  CRU, reviewer, KEPK) di atas; kartu yang lepas dari alur di bawah. Karena itu **Perjanjian
+  Kerjasama (PKS) sengaja paling bawah** — CRU boleh mengunggahnya kapan saja, termasuk setelah
+  proposal `Selesai`, jadi ia tidak boleh menyaingi kartu yang menahan alur.
 
 ### Form & validasi
 Aturan validasi upload **selalu** diambil dari enum, jangan ditulis ulang:
 
 ```php
 $this->validate(['fileUpload' => 'required|' . DocumentType::IzinFinal->aturanValidasi()]);
+```
+
+Teks bantuan ukuran & format juga tidak ditulis tangan — ia turunan dari aturan yang sama:
+
+```blade
+<x-mary-file label="Surat izin final" :hint="DocumentType::IzinFinal->hintUnggah()"
+    wire:model="fileUpload" accept="application/pdf" />
 ```
 
 Label error bahasa Indonesia lewat argumen ketiga `validate()` (mis. `['catatan' => 'komentar']`).

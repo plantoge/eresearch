@@ -17,8 +17,13 @@ Aplikasi berjalan penuh untuk alur 4 tahap.
 **Struktur database sudah dipisah per kelompok CRU & KEPK** (schema `rspi`, 5 tabel baru,
 2 tabel di-rename), **Tahap 2 mendapat langkah verifikasi berkas etik oleh KEPK** yang
 sebelumnya tidak ada, dan **PKS dipindah dari berkas wajib Tahap 2 menjadi unggahan CRU**
-yang lepas dari alur. Verifikasi terakhir: **`artisan test` → 72 lulus, 180 assertion**,
+yang lepas dari alur. Verifikasi terakhir: **`artisan test` → 73 lulus, 183 assertion**,
 berjalan di PostgreSQL (`cru_test`) — bukan lagi sqlite in-memory.
+
+Dua penyeragaman tampilan menyusul, aturannya dikunci di
+[design.md §5](design.md#5-aturan-tampilan-yang-mengikat): semua daftar data menampilkan
+**terbaru di atas**, dan setiap input unggah menampilkan **format & ukuran maksimal** yang
+diturunkan dari aturan validasinya sendiri.
 
 **DB kerja `cru` sudah di-migrate** (`migrate:fresh --seed`, 7 Agustus 2026) dan diverifikasi
 read-only: 14 tabel di `public`, 17 di `rspi`, 7 partial unique index, dan keempat kolom yang
