@@ -5,13 +5,13 @@ namespace Tests\Feature;
 use App\Livewire\Auth\Register;
 use App\Models\Menu;
 use App\Models\User;
-use Database\Seeders\RoleSeeder;
 use App\Notifications\VerifikasiEmail;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
-use Livewire\Livewire;
 use Livewire\Features\SupportTesting\Testable;
+use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 

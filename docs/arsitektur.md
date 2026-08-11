@@ -18,6 +18,7 @@
 | Build front-end | Vite 7 (butuh Node ≥ 20.19) | |
 | Queue | `database` | dipakai email; worker wajib jalan di produksi |
 | Realtime | **tidak ada** | tanpa WebSocket, tanpa broadcasting |
+| Notifikasi | Telegram Bot API | keluar saja (satu `Http::post()`), tanpa paket, tanpa daemon |
 
 ### Lingkungan pengembangan (Windows/Laragon)
 
@@ -220,6 +221,48 @@ request, bukan dibekukan saat route didaftarkan, sehingga toggle langsung berlak
 `EMAIL_VERIFICATION_REQUIRED=true` → `artisan config:clear`.
 Cek pengiriman di Resend → menu *Logs/Emails*. User demo dari seeder sudah `email_verified_at`
 terisi, jadi tidak ke-gate; untuk menguji, daftar akun baru.
+
+### Notifikasi Telegram ke grup staf
+
+Tiap aksi peneliti yang memindahkan status proposal mengirim satu pesan singkat ke **satu
+grup Telegram** berisi staf CRU/KEPK. Tidak ada paket baru — cukup satu `Http::post()` ke
+Bot API, dan arahnya hanya keluar sehingga tidak butuh webhook maupun proses yang dijaga hidup.
+
+| Item | Nilai |
+|---|---|
+| Toggle | `TELEGRAM_NOTIFIKASI_AKTIF` — **default `false`** |
+| Kredensial | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` |
+| Timeout | `TELEGRAM_TIMEOUT` (detik, default 5) |
+| Config | `config/eproposal.php` → `eproposal.telegram.*` |
+
+**Setup sekali:** chat `@BotFather` → `/newbot` → salin token → buat grup → masukkan bot
+sebagai anggota → ambil `chat_id` grup (angkanya diawali `-100...`). Lalu
+`artisan config:clear`.
+
+Selama toggle `false` atau token/chat_id kosong, **tidak ada satu pun panggilan HTTP** —
+aplikasi berjalan persis seperti sebelum fitur ini ada.
+
+**Isi pesan sengaja minim:** kode proposal, status, unit, dan link. Judul penelitian, nama
+peneliti, dan catatan **tidak pernah dikirim**. Alasannya sama dengan alasan MinIO/S3 cloud
+ditolak di §4 — grup Telegram di luar kendali izin aplikasi (semua anggota melihat semuanya,
+bisa di-forward keluar) dan servernya di luar jaringan RS. Yang butuh detail mengklik
+linknya, dan di sana otorisasi ditegakkan seperti biasa. Aturan ini dikunci sebagai tes di
+`NotifikasiTelegramTest`, bukan sekadar konvensi.
+
+**Titik sisipnya satu**: observer `created()` pada `proposal_status_history`. Semua aksi
+peneliti sudah bermuara di `ProposalWorkflow::catatHistory()`, jadi alur baru otomatis ikut
+terkirim tanpa menambah kode — dan `ProposalWorkflow` sendiri tidak disentuh sama sekali.
+Saringannya `actor_id === proposal.user_id`, sehingga aksi staf dan aksi tanpa login
+(seeder) tersaring dengan sendirinya.
+
+> **Notifikasi ikut queue, sama seperti email.** Gejalanya juga sama: kalau worker mati,
+> tidak ada error tapi pesan tidak sampai — bedanya notifikasi tidak hilang, ia mengantre
+> sampai worker hidup. Kalau worker bermasalah dan ingin dijalankan langsung tanpa antrian,
+> `QUEUE_CONNECTION=sync` membuatnya jalan inline **tanpa mengubah kode**.
+>
+> Kegagalan Telegram dalam bentuk apa pun (token salah, bot bukan anggota grup, API down)
+> dicatat di `laravel.log` dan `failed_jobs`, dan **tidak pernah** menjatuhkan pengajuan
+> peneliti.
 
 ---
 
