@@ -18,7 +18,10 @@
       "Bash(graphify explain *)",
       "Bash(php -i)",
       "Read(//c/laragon/bin/php/php-8.4.12-nts-Win32-vs17-x64/**)",
-      "Bash(grep -n 'mary-toast\\\\|addEventListener\\\\|window.addEventListener\\\\|$dispatch\\\\|x-on:' d:/app/cru/vendor/robsontenorio/mary/src/View/Components/Toast.php)"
+      "Bash(grep -n 'mary-toast\\\\|addEventListener\\\\|window.addEventListener\\\\|$dispatch\\\\|x-on:' d:/app/cru/vendor/robsontenorio/mary/src/View/Components/Toast.php)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   },
   "hooks": {

@@ -54,7 +54,7 @@ class KirimNotifikasiTelegram implements ShouldQueue
 
         // Status terminal (Selesai/Dibatalkan) tidak punya unit — barisnya dilewati.
         if ($unit = $this->history->unit?->label()) {
-            $baris[] = 'Bola di: '.e($unit);
+            $baris[] = 'Untuk: '.e($unit);
         }
 
         $baris[] = route('proposal.show', $proposal);

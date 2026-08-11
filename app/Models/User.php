@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Concerns\HasUuidAndAudit;
+use App\Notifications\ResetPasswordRSPI;
+use App\Notifications\VerifikasiEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -61,12 +63,12 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function sendEmailVerificationNotification(): void
     {
-        $this->notify(new \App\Notifications\VerifikasiEmail);
+        $this->notify(new VerifikasiEmail);
     }
 
     public function sendPasswordResetNotification($token): void
     {
-        $this->notify(new \App\Notifications\ResetPasswordRSPI($token));
+        $this->notify(new ResetPasswordRSPI($token));
     }
 
     public function proposals()

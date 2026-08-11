@@ -21,7 +21,7 @@ class VerifikasiEmail extends Notification
             'verification.verify',
             now()->addMinutes(60),
             [
-                'id'   => $notifiable->getKey(),
+                'id' => $notifiable->getKey(),
                 'hash' => sha1($notifiable->getEmailForVerification()),
             ],
         );
@@ -29,7 +29,7 @@ class VerifikasiEmail extends Notification
         return (new MailMessage)
             ->subject('Verifikasi Akun eProposal RSPI')
             ->markdown('emails.verifikasi', [
-                'url'  => $url,
+                'url' => $url,
                 'user' => $notifiable,
             ]);
     }
