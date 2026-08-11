@@ -372,13 +372,24 @@ set `true` — tanpa itu URL yang di-generate berskema `http://` dan Livewire ke
 Default worker = jumlah core; `--max-requests=500` adalah jaring pengaman memory leak, jangan
 dinaikkan tanpa alasan.
 
-**Queue & scheduler tetap proses terpisah** — Octane tidak menjalankannya. Email Resend lewat
-queue (`QUEUE_CONNECTION=database`), jadi tanpa worker gejalanya "tidak ada error, tapi email
-tidak sampai".
+**Queue & scheduler tetap proses terpisah** — Octane tidak menjalankannya. Email Resend dan
+notifikasi Telegram (`KirimNotifikasiTelegram`, lihat §5) lewat queue
+(`QUEUE_CONNECTION=database`), jadi tanpa worker gejalanya "tidak ada error, tapi email/notifikasi
+tidak sampai" — job cuma numpuk diam-diam di tabel `jobs`.
+
+Worker dijaga Supervisor (config: `deploy/supervisor/eproposal-queue.conf`), bukan systemd unit —
+lebih familiar buat tim dan `supervisorctl restart` gampang dipakai tiap habis deploy (worker
+me-load kode job saat boot, jadi harus direstart supaya tidak jalan dengan kode usang):
 
 ```ini
-# /etc/systemd/system/eproposal-queue.service → ExecStart
-/usr/bin/php artisan queue:work --tries=3 --timeout=90
+; /etc/supervisor/conf.d/eproposal-queue.conf
+[program:eproposal-queue]
+command=php /var/www/eproposal/artisan queue:work --tries=3 --timeout=90
+autostart=true
+autorestart=true
+user=www-data
+numprocs=1
+stopwaitsecs=3600
 ```
 ```cron
 * * * * * cd /var/www/eproposal && php artisan schedule:run >> /dev/null 2>&1
