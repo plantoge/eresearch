@@ -1,4 +1,7 @@
-@php use App\Enums\ProposalStatus; use App\Enums\DocumentType; @endphp
+@php
+    use App\Enums\ProposalStatus;
+    use App\Enums\DocumentType;
+@endphp
 <div>
     <x-mary-header :title="$proposal->kode" separator>
         <x-slot:subtitle>
@@ -19,29 +22,41 @@
                 <div class="grid sm:grid-cols-2 gap-3 text-sm">
                     <div><span class="opacity-60">Peneliti utama:</span><br>{{ $proposal->peneliti_utama }}</div>
                     <div><span class="opacity-60">Institusi:</span><br>{{ $proposal->institusi_asal ?: '—' }}</div>
-                    <div class="sm:col-span-2"><span class="opacity-60">Judul:</span><br>{{ $proposal->judul_penelitian }}</div>
-                    <div class="sm:col-span-2"><span class="opacity-60">Tim:</span><br>{{ $proposal->tim_peneliti ?: '—' }}</div>
+                    <div class="sm:col-span-2"><span
+                            class="opacity-60">Judul:</span><br>{{ $proposal->judul_penelitian }}</div>
+                    <div class="sm:col-span-2"><span
+                            class="opacity-60">Tim:</span><br>{{ $proposal->tim_peneliti ?: '—' }}</div>
                     @if ($berkasCru?->tanggal_presentasi)
-                        <div><span class="opacity-60">Presentasi:</span><br>{{ $berkasCru->tanggal_presentasi->format('d/m/Y H:i') }}</div>
-                        <div><span class="opacity-60">Kategori / media:</span><br>{{ $berkasCru->kategori_presentasi }} · {{ $berkasCru->media_presentasi }}</div>
+                        <div><span
+                                class="opacity-60">Presentasi:</span><br>{{ $berkasCru->tanggal_presentasi->format('d/m/Y H:i') }}
+                        </div>
+                        <div><span class="opacity-60">Kategori / media:</span><br>{{ $berkasCru->kategori_presentasi }}
+                            · {{ $berkasCru->media_presentasi }}</div>
                     @endif
                     @if ($protokolEtik?->nomor_protokol)
-                        <div><span class="opacity-60">No. protokol etik:</span><br>{{ $protokolEtik->nomor_protokol }}</div>
-                        <div><span class="opacity-60">Jenis telaah:</span><br>{{ $protokolEtik->jenis_telaah?->label() ?? '—' }}</div>
+                        <div><span class="opacity-60">No. protokol etik:</span><br>{{ $protokolEtik->nomor_protokol }}
+                        </div>
+                        <div><span class="opacity-60">Jenis
+                                telaah:</span><br>{{ $protokolEtik->jenis_telaah?->label() ?? '—' }}</div>
                     @endif
                 </div>
             </x-mary-card>
 
             <x-mary-card title="Dokumen" shadow>
                 @forelse ($dokumen as $jenis => $files)
-                    @php $latest = $files->first(); $tipe = DocumentType::from($jenis); @endphp
+                    @php
+                        $latest = $files->first();
+                        $tipe = DocumentType::from($jenis);
+                    @endphp
                     <div class="flex items-center justify-between py-2 border-b border-base-200 last:border-0">
                         <div>
                             <div class="font-medium text-sm">{{ $tipe->label() }}</div>
-                            <div class="text-xs opacity-60">v{{ $latest->versi }} · {{ $latest->nama_asli }} · {{ $latest->created_at->format('d/m/Y H:i') }}</div>
+                            <div class="text-xs opacity-60">v{{ $latest->versi }} · {{ $latest->nama_asli }} ·
+                                {{ $latest->created_at->format('d/m/Y H:i') }}</div>
                         </div>
-                        <x-mary-button icon="o-arrow-down-tray" link="{{ route('dokumen.download', $latest) }}" class="btn-ghost btn-sm" external
-                            tooltip="{{ $tipe === DocumentType::IzinFinal && ! $proposal->sudahIsiSurvey() ? 'Terkunci — isi survey dulu' : 'Unduh' }}" />
+                        <x-mary-button icon="o-arrow-down-tray" link="{{ route('dokumen.download', $latest) }}"
+                            class="btn-ghost btn-sm" external
+                            tooltip="{{ $tipe === DocumentType::IzinFinal && !$proposal->sudahIsiSurvey() ? 'Terkunci — isi survey dulu' : 'Unduh' }}" />
                     </div>
                 @empty
                     <div class="opacity-60 text-sm">Belum ada dokumen.</div>
@@ -50,12 +65,14 @@
 
             {{-- Berkas telaah ada di tabel & route terpisah: peneliti tidak punya jalan ke sini. --}}
             @if ($bolehLihatReview && $dokumenTelaah->isNotEmpty())
-                <x-mary-card title="Berkas Telaah Reviewer" subtitle="Rahasia — tidak pernah terlihat oleh peneliti" shadow>
+                <x-mary-card title="Berkas Telaah Reviewer" subtitle="Rahasia — tidak pernah terlihat oleh peneliti"
+                    shadow>
                     @foreach ($dokumenTelaah as $d)
                         <div class="flex items-center justify-between py-2 border-b border-base-200 last:border-0">
                             <div>
                                 <div class="font-medium text-sm">{{ $d->nama_asli ?: 'File tanggapan reviewer' }}</div>
-                                <div class="text-xs opacity-60">v{{ $d->versi }} · {{ $d->created_at->format('d/m/Y H:i') }}</div>
+                                <div class="text-xs opacity-60">v{{ $d->versi }} ·
+                                    {{ $d->created_at->format('d/m/Y H:i') }}</div>
                             </div>
                             <x-mary-button icon="o-arrow-down-tray" link="{{ route('dokumen-telaah.download', $d) }}"
                                 class="btn-ghost btn-sm" external tooltip="Unduh" />
@@ -67,15 +84,23 @@
             @if ($pembayaran->isNotEmpty())
                 <x-mary-card title="Pembayaran" subtitle="Dua pembayaran terpisah — CRU dan KEPK" shadow>
                     <table class="table table-sm">
-                        <thead><tr><th>Tujuan</th><th>Status</th><th>Catatan</th></tr></thead>
-                        <tbody>
-                        @foreach ($pembayaran as $bayar)
+                        <thead>
                             <tr>
-                                <td>{{ $bayar->tujuan->label() }}</td>
-                                <td><span class="badge badge-sm {{ $bayar->status->warna() }}">{{ $bayar->status->label() }}</span></td>
-                                <td class="text-xs opacity-70">{{ $bayar->catatan ?: '—' }}</td>
+                                <th>Tujuan</th>
+                                <th>Status</th>
+                                <th>Catatan</th>
                             </tr>
-                        @endforeach
+                        </thead>
+                        <tbody>
+                            @foreach ($pembayaran as $bayar)
+                                <tr>
+                                    <td>{{ $bayar->tujuan->label() }}</td>
+                                    <td><span
+                                            class="badge badge-sm {{ $bayar->status->warna() }}">{{ $bayar->status->label() }}</span>
+                                    </td>
+                                    <td class="text-xs opacity-70">{{ $bayar->catatan ?: '—' }}</td>
+                                </tr>
+                            @endforeach
                         </tbody>
                     </table>
                 </x-mary-card>
@@ -86,24 +111,28 @@
                 @if ($proposal->status === ProposalStatus::PerluRevisiProposal)
                     <x-mary-card title="Perbaiki Proposal" subtitle="Unggah revisi proposal Anda" shadow>
                         <x-mary-form wire:submit="kirimRevisi">
-                            <x-mary-file label="Proposal revisi" :hint="DocumentType::Proposal->hintUnggah()"
-                                wire:model="fileUpload" accept="application/pdf" required />
+                            <x-mary-file label="Proposal revisi" :hint="DocumentType::Proposal->hintUnggah()" wire:model="fileUpload"
+                                accept="application/pdf" required />
                             <x-mary-textarea label="Catatan (opsional)" wire:model="catatan" rows="2" />
-                            <x-slot:actions><x-mary-button label="Kirim Revisi" type="submit" class="btn-primary" spinner="kirimRevisi" /></x-slot:actions>
+                            <x-slot:actions><x-mary-button label="Kirim Revisi" type="submit" class="btn-primary"
+                                    spinner="kirimRevisi" /></x-slot:actions>
                         </x-mary-form>
                     </x-mary-card>
                 @elseif ($proposal->status === ProposalStatus::MenungguKelengkapanBerkasEtik)
                     <x-mary-card title="Lengkapi Berkas Kaji Etik" subtitle="Tahap 2 — semua wajib PDF" shadow>
                         <x-mary-form wire:submit="kirimBerkasEtik">
                             @foreach (DocumentType::wajibTahap2() as $jenis)
-                                <x-mary-file :label="$jenis->label()" :hint="$jenis->hintUnggah()" wire:model="fileEtik.{{ $jenis->value }}" accept="application/pdf" required />
+                                <x-mary-file :label="$jenis->label()" :hint="$jenis->hintUnggah()"
+                                    wire:model="fileEtik.{{ $jenis->value }}" accept="application/pdf" required />
                             @endforeach
-                            <x-slot:actions><x-mary-button label="Kirim ke KEPK" type="submit" class="btn-primary" spinner="kirimBerkasEtik" /></x-slot:actions>
+                            <x-slot:actions><x-mary-button label="Kirim ke KEPK" type="submit" class="btn-primary"
+                                    spinner="kirimBerkasEtik" /></x-slot:actions>
                         </x-mary-form>
                     </x-mary-card>
                 @elseif ($proposal->status === ProposalStatus::PerluRevisiBerkasEtik)
                     <x-mary-card title="Perbaiki Berkas Kaji Etik"
-                        subtitle="Dikembalikan KEPK — unggah yang perlu diperbaiki saja, termasuk proposal bila perlu" shadow>
+                        subtitle="Dikembalikan KEPK — unggah yang perlu diperbaiki saja, termasuk proposal bila perlu"
+                        shadow>
                         {{-- Catatan KEPK ditampilkan langsung: tanpa ini peneliti harus
                              menebak apa yang salah dari kolom riwayat di samping. --}}
                         @php $catatanKepk = $history->where('to_status', ProposalStatus::PerluRevisiBerkasEtik)->last()?->catatan; @endphp
@@ -116,98 +145,132 @@
                             {{-- Proposal ikut ditelaah tim KEPK, jadi koreksi mereka bisa
                                  menyangkut proposalnya — bukan hanya berkas etik. --}}
                             <x-mary-file label="{{ DocumentType::Proposal->label() }} (bila ikut dikoreksi)"
-                                :hint="DocumentType::Proposal->hintUnggah()"
-                                wire:model="fileProposal" accept="application/pdf" />
+                                :hint="DocumentType::Proposal->hintUnggah()" wire:model="fileProposal" accept="application/pdf" />
                             @foreach (DocumentType::wajibTahap2() as $jenis)
-                                <x-mary-file :label="$jenis->label()" :hint="$jenis->hintUnggah()" wire:model="fileEtik.{{ $jenis->value }}" accept="application/pdf" />
+                                <x-mary-file :label="$jenis->label()" :hint="$jenis->hintUnggah()"
+                                    wire:model="fileEtik.{{ $jenis->value }}" accept="application/pdf" />
                             @endforeach
-                            @error('fileEtik')<div class="text-error text-sm">{{ $message }}</div>@enderror
+                            @error('fileEtik')
+                                <div class="text-error text-sm">{{ $message }}</div>
+                            @enderror
                             <x-mary-textarea label="Catatan (opsional)" wire:model="catatan" rows="2" />
-                            <x-slot:actions><x-mary-button label="Kirim Ulang ke KEPK" type="submit" class="btn-primary" spinner="kirimPerbaikanBerkasEtik" /></x-slot:actions>
+                            <x-slot:actions><x-mary-button label="Kirim Ulang ke KEPK" type="submit"
+                                    class="btn-primary" spinner="kirimPerbaikanBerkasEtik" /></x-slot:actions>
                         </x-mary-form>
                     </x-mary-card>
                 @elseif ($proposal->status === ProposalStatus::PerluRevisiReviewer)
-                    <x-mary-card title="Perbaiki Berkas Etik" subtitle="Sesuai komentar Reviewer — unggah berkas yang direvisi saja" shadow>
+                    <x-mary-card title="Perbaiki Berkas Etik"
+                        subtitle="Sesuai komentar Reviewer — unggah berkas yang direvisi saja" shadow>
                         <x-mary-form wire:submit="kirimRevisiEtik">
                             @foreach (DocumentType::wajibTahap2() as $jenis)
-                                <x-mary-file :label="$jenis->label()" :hint="$jenis->hintUnggah()" wire:model="fileEtik.{{ $jenis->value }}" accept="application/pdf" />
+                                <x-mary-file :label="$jenis->label()" :hint="$jenis->hintUnggah()"
+                                    wire:model="fileEtik.{{ $jenis->value }}" accept="application/pdf" />
                             @endforeach
-                            @error('fileEtik')<div class="text-error text-sm">{{ $message }}</div>@enderror
+                            @error('fileEtik')
+                                <div class="text-error text-sm">{{ $message }}</div>
+                            @enderror
                             <x-mary-textarea label="Catatan (opsional)" wire:model="catatan" rows="2" />
-                            <x-slot:actions><x-mary-button label="Kirim Ulang" type="submit" class="btn-primary" spinner="kirimRevisiEtik" /></x-slot:actions>
+                            <x-slot:actions><x-mary-button label="Kirim Ulang" type="submit" class="btn-primary"
+                                    spinner="kirimRevisiEtik" /></x-slot:actions>
                         </x-mary-form>
                     </x-mary-card>
                 @elseif ($proposal->status === ProposalStatus::MenungguPembayaran)
                     <x-mary-card title="Pembayaran" subtitle="Tahap 3 — dua pembayaran terpisah: CRU & KEPK" shadow>
                         @if ($kontak)
                             <x-mary-alert icon="o-banknotes" class="alert-info mb-3">
-                                {{ $kontak->nama_bank }} · {{ $kontak->nomor_rekening }} a.n. {{ $kontak->pemilik_rekening }}
-                                @if ($kontak->deskripsi_biaya)<br><span class="text-xs">{{ $kontak->deskripsi_biaya }}</span>@endif
+                                {{ $kontak->nama_bank }} · {{ $kontak->nomor_rekening }} a.n.
+                                {{ $kontak->pemilik_rekening }}
+                                @if ($kontak->deskripsi_biaya)
+                                    <br><span class="text-xs">{{ $kontak->deskripsi_biaya }}</span>
+                                @endif
                             </x-mary-alert>
                         @endif
                         <x-mary-form wire:submit="kirimBuktiBayar">
-                            <x-mary-file label="Bukti pembayaran CRU" :hint="DocumentType::BuktiBayarCru->hintUnggah()"
-                                wire:model="fileBayarCru" required />
-                            <x-mary-file label="Bukti pembayaran KEPK" :hint="DocumentType::BuktiBayarKepk->hintUnggah()"
-                                wire:model="fileBayarKepk" required />
-                            <x-slot:actions><x-mary-button label="Kirim Bukti" type="submit" class="btn-primary" spinner="kirimBuktiBayar" /></x-slot:actions>
+                            <x-mary-file label="Bukti pembayaran CRU" :hint="DocumentType::BuktiBayarCru->hintUnggah()" wire:model="fileBayarCru"
+                                required />
+                            <x-mary-file label="Bukti pembayaran KEPK" :hint="DocumentType::BuktiBayarKepk->hintUnggah()" wire:model="fileBayarKepk"
+                                required />
+                            <x-slot:actions><x-mary-button label="Kirim Bukti" type="submit"
+                                    class="btn-primary" spinner="kirimBuktiBayar" /></x-slot:actions>
                         </x-mary-form>
                     </x-mary-card>
                 @elseif ($proposal->status === ProposalStatus::PelaksanaanPenelitian)
-                    <x-mary-card title="Laporkan Hasil Penelitian" subtitle="Tahap 4 — laporan (PDF) + raw data (Excel)" shadow>
+                    <x-mary-card title="Laporkan Hasil Penelitian"
+                        subtitle="Tahap 4 — laporan (PDF) + raw data (Excel)" shadow>
                         <x-mary-form wire:submit="kirimLaporan">
-                            <x-mary-file label="Laporan penelitian" :hint="DocumentType::LaporanPenelitian->hintUnggah()"
-                                wire:model="fileLaporan" accept="application/pdf" required />
-                            <x-mary-file label="Raw data" :hint="DocumentType::RawData->hintUnggah()"
-                                wire:model="fileRawData" required />
-                            <x-slot:actions><x-mary-button label="Kirim Laporan" type="submit" class="btn-primary" spinner="kirimLaporan" /></x-slot:actions>
+                            <x-mary-file label="Laporan penelitian" :hint="DocumentType::LaporanPenelitian->hintUnggah()" wire:model="fileLaporan"
+                                accept="application/pdf" required />
+                            <x-mary-file label="Raw data" :hint="DocumentType::RawData->hintUnggah()" wire:model="fileRawData" required />
+                            <x-slot:actions><x-mary-button label="Kirim Laporan" type="submit"
+                                    class="btn-primary" spinner="kirimLaporan" /></x-slot:actions>
                         </x-mary-form>
                     </x-mary-card>
                 @elseif ($proposal->status === ProposalStatus::MenungguSurveyKepuasan)
-                    <x-mary-card title="Survey Kepuasan" subtitle="Wajib diisi sebelum surat izin final dapat diunduh" shadow>
+                    <x-mary-card title="Survey Kepuasan" subtitle="Wajib diisi sebelum surat izin final dapat diunduh"
+                        shadow>
                         <x-mary-form wire:submit="kirimSurvey">
                             @foreach ($aspekSurvey as $aspek)
                                 <div class="font-semibold mt-2">{{ $aspek->nama_aspek }}</div>
                                 @foreach ($aspek->pertanyaan as $p)
-                                    <div class="text-sm mb-1">{{ $p->pertanyaan }} @if($p->is_required)<span class="text-error">*</span>@endif</div>
+                                    <div class="text-sm mb-1">{{ $p->pertanyaan }} @if ($p->is_required)
+                                            <span class="text-error">*</span>
+                                        @endif
+                                    </div>
                                     <div class="flex flex-wrap gap-3 mb-2">
                                         @foreach ($skalaSurvey as $skala)
                                             <label class="flex items-center gap-1 text-xs cursor-pointer">
                                                 <input type="radio" class="radio radio-xs radio-primary"
-                                                    wire:model="jawabanSurvey.{{ $p->id }}" value="{{ $skala->id }}">
+                                                    wire:model="jawabanSurvey.{{ $p->id }}"
+                                                    value="{{ $skala->id }}">
                                                 {{ $skala->nama_skala }}
                                             </label>
                                         @endforeach
                                     </div>
                                 @endforeach
                             @endforeach
-                            @error('jawabanSurvey')<div class="text-error text-sm">{{ $message }}</div>@enderror
+                            @error('jawabanSurvey')
+                                <div class="text-error text-sm">{{ $message }}</div>
+                            @enderror
                             <x-mary-textarea label="Saran" wire:model="saran" rows="3" />
-                            <x-slot:actions><x-mary-button label="Kirim Survey & Buka Unduhan Izin" type="submit" class="btn-primary" spinner="kirimSurvey" /></x-slot:actions>
+                            <x-slot:actions><x-mary-button label="Kirim Survey & Buka Unduhan Izin"
+                                    type="submit" class="btn-primary" spinner="kirimSurvey" /></x-slot:actions>
                         </x-mary-form>
                     </x-mary-card>
                 @endif
             @endif
 
             {{-- ===== PANEL AKSI CRU ===== --}}
-            @if ($isCru && in_array($proposal->status, [ProposalStatus::MenungguVerifikasiBerkas, ProposalStatus::MenungguVerifikasiRevisi, ProposalStatus::MenungguPresentasi], true))
+            @if (
+                $isCru &&
+                    in_array(
+                        $proposal->status,
+                        [
+                            ProposalStatus::MenungguVerifikasiBerkas,
+                            ProposalStatus::MenungguVerifikasiRevisi,
+                            ProposalStatus::MenungguPresentasi,
+                        ],
+                        true))
                 <x-mary-card title="Aksi CRU" subtitle="Review berkas / hasil presentasi" shadow>
                     <x-mary-textarea label="Catatan" wire:model="catatan" rows="2" />
                     <x-mary-file label="Lampiran (surat tanggapan / penolakan)" :hint="DocumentType::SuratTanggapan->hintUnggah()"
                         wire:model="fileUpload" accept="application/pdf" />
                     <div class="grid sm:grid-cols-3 gap-2 mt-3">
-                        <x-mary-input label="Tanggal presentasi" wire:model="tanggal_presentasi" type="datetime-local" />
+                        <x-mary-input label="Tanggal presentasi" wire:model="tanggal_presentasi"
+                            type="datetime-local" />
                         <x-mary-input label="Kategori" wire:model="kategori_presentasi" placeholder="mis. Luring" />
-                        <x-mary-input label="Media" wire:model="media_presentasi" placeholder="mis. Zoom / R. Rapat" />
+                        <x-mary-input label="Media" wire:model="media_presentasi"
+                            placeholder="mis. Zoom / R. Rapat" />
                     </div>
                     <x-slot:actions>
                         {{-- Loloskan juga tersedia setelah verifikasi revisi: revisi yang sudah
                              memuaskan tak perlu presentasi ulang hanya demi mencapai tombol ini. --}}
                         @if (in_array($proposal->status, [ProposalStatus::MenungguPresentasi, ProposalStatus::MenungguVerifikasiRevisi], true))
-                            <x-mary-button label="Loloskan ke KEPK" wire:click="loloskan" class="btn-success" spinner />
+                            <x-mary-button label="Loloskan ke KEPK" wire:click="loloskan" class="btn-success"
+                                spinner />
                         @endif
                         @if ($proposal->status !== ProposalStatus::MenungguPresentasi)
-                            <x-mary-button label="Minta Presentasi" wire:click="mintaPresentasi" class="btn-info" spinner />
+                            <x-mary-button label="Minta Presentasi" wire:click="mintaPresentasi" class="btn-info"
+                                spinner />
                         @endif
                         <x-mary-button label="Minta Revisi" wire:click="mintaRevisi" class="btn-warning" spinner />
                         <x-mary-button label="Tolak" wire:click="tolak" class="btn-error" spinner
@@ -217,33 +280,39 @@
             @endif
 
             @if ($isCru && $proposal->status === ProposalStatus::MenungguVerifikasiPembayaran)
-                <x-mary-card title="Verifikasi Pembayaran" subtitle="Terima → unggah draft izin. Tolak → kembali ke peneliti." shadow>
+                <x-mary-card title="Verifikasi Pembayaran"
+                    subtitle="Terima → unggah draft izin. Tolak → kembali ke peneliti." shadow>
                     <x-mary-textarea label="Catatan" wire:model="catatan" rows="2" />
-                    <x-mary-file label="Draft surat izin" :hint="DocumentType::IzinDraft->hintUnggah()"
-                        wire:model="fileUpload" accept="application/pdf" />
+                    <x-mary-file label="Draft surat izin" :hint="DocumentType::IzinDraft->hintUnggah()" wire:model="fileUpload"
+                        accept="application/pdf" />
                     <x-slot:actions>
-                        <x-mary-button label="Tolak Bukti Bayar" wire:click="tolakBuktiBayar" class="btn-warning" spinner />
-                        <x-mary-button label="Terbitkan Draft Izin" wire:click="terbitkanDraftIzin" class="btn-success" spinner />
+                        <x-mary-button label="Tolak Bukti Bayar" wire:click="tolakBuktiBayar" class="btn-warning"
+                            spinner />
+                        <x-mary-button label="Terbitkan Draft Izin" wire:click="terbitkanDraftIzin"
+                            class="btn-success" spinner />
                     </x-slot:actions>
                 </x-mary-card>
             @endif
 
             @if ($isCru && $proposal->status === ProposalStatus::MenungguVerifikasiAkhir)
-                <x-mary-card title="Verifikasi Akhir" subtitle="Terima → terbit izin final (unduh terkunci survey). Tolak → laporan diperbaiki." shadow>
+                <x-mary-card title="Verifikasi Akhir"
+                    subtitle="Terima → terbit izin final (unduh terkunci survey). Tolak → laporan diperbaiki." shadow>
                     <x-mary-textarea label="Catatan" wire:model="catatan" rows="2" />
-                    <x-mary-file label="Surat izin final" :hint="DocumentType::IzinFinal->hintUnggah()"
-                        wire:model="fileUpload" accept="application/pdf" />
+                    <x-mary-file label="Surat izin final" :hint="DocumentType::IzinFinal->hintUnggah()" wire:model="fileUpload"
+                        accept="application/pdf" />
                     <x-slot:actions>
                         <x-mary-button label="Tolak Laporan" wire:click="tolakLaporan" class="btn-warning" spinner />
-                        <x-mary-button label="Terbitkan Izin Final" wire:click="terbitkanIzinFinal" class="btn-success" spinner />
+                        <x-mary-button label="Terbitkan Izin Final" wire:click="terbitkanIzinFinal"
+                            class="btn-success" spinner />
                     </x-slot:actions>
                 </x-mary-card>
             @endif
 
-            @if ($isCru && ! $proposal->status->isTerminal())
+            @if ($isCru && !$proposal->status->isTerminal())
                 <x-mary-card shadow>
                     <x-slot:actions>
-                        <x-mary-button label="Batalkan Proposal" wire:click="batalkan" class="btn-error btn-outline btn-sm" spinner
+                        <x-mary-button label="Batalkan Proposal" wire:click="batalkan"
+                            class="btn-error btn-outline btn-sm" spinner
                             wire:confirm="Batalkan proposal ini secara permanen?" />
                     </x-slot:actions>
                 </x-mary-card>
@@ -252,25 +321,28 @@
             {{-- ===== PANEL AKSI REVIEWER (jawaban ke KEPK) ===== --}}
             @if ($isReviewer && $penugasanSaya && $proposal->status === ProposalStatus::MenungguReviewReviewer)
                 @if ($penugasanSaya->status === 'menunggu')
-                    <x-mary-card title="Telaah Reviewer" subtitle="Tanggapan Anda dikirim ke KEPK (bukan langsung ke peneliti)" shadow>
+                    <x-mary-card title="Telaah Reviewer"
+                        subtitle="Tanggapan Anda dikirim ke KEPK (bukan langsung ke peneliti)" shadow>
                         <x-mary-textarea label="Komentar / masukan" wire:model="catatan" rows="3" />
                         {{-- File tanggapan jarang dipakai — disembunyikan di balik toggle --}}
                         <details class="mt-2">
-                            <summary class="text-sm opacity-60 cursor-pointer select-none">Lampirkan file tanggapan (opsional)</summary>
+                            <summary class="text-sm opacity-60 cursor-pointer select-none">Lampirkan file tanggapan
+                                (opsional)</summary>
                             <div class="pt-2">
-                                <x-mary-file label="File tanggapan"
-                                    :hint="DocumentType::hintDariAturan(\App\Models\DokumenTelaah::ATURAN_VALIDASI)"
-                                    wire:model="fileUpload" accept="application/pdf" />
+                                <x-mary-file label="File tanggapan" :hint="DocumentType::hintDariAturan(\App\Models\DokumenTelaah::ATURAN_VALIDASI)" wire:model="fileUpload"
+                                    accept="application/pdf" />
                             </div>
                         </details>
                         <x-slot:actions>
-                            <x-mary-button label="Minta Revisi" wire:click="reviewerMintaRevisi" class="btn-warning" spinner />
+                            <x-mary-button label="Minta Revisi" wire:click="reviewerMintaRevisi" class="btn-warning"
+                                spinner />
                             <x-mary-button label="ACC Berkas" wire:click="reviewerAcc" class="btn-success" spinner />
                         </x-slot:actions>
                     </x-mary-card>
                 @else
                     <x-mary-alert icon="o-check" class="alert-success">
-                        Tanggapan Anda ({{ strtoupper($penugasanSaya->status) }}) sudah terkirim ke KEPK. Menunggu reviewer lain / keputusan KEPK.
+                        Tanggapan Anda ({{ strtoupper($penugasanSaya->status) }}) sudah terkirim ke KEPK. Menunggu
+                        reviewer lain / keputusan KEPK.
                     </x-mary-alert>
                 @endif
             @endif
@@ -278,41 +350,56 @@
             {{-- ===== PANEL AKSI KEPK ===== --}}
             @if ($isKepk && $proposal->status === ProposalStatus::MenungguPenunjukanReviewer)
                 <x-mary-card title="Verifikasi Berkas & Penunjukan Reviewer"
-                    subtitle="Periksa kelengkapan 4 berkas etik dulu — kembalikan ke peneliti bila ada yang kurang" shadow>
+                    subtitle="Periksa kelengkapan 4 berkas etik dulu — kembalikan ke peneliti bila ada yang kurang"
+                    shadow>
                     {{-- Penomoran KEPK sendiri, terpisah dari kode RSPISS milik CRU --}}
                     <div class="grid sm:grid-cols-3 gap-2 mb-3">
-                        <x-mary-input label="No. protokol etik" wire:model="nomor_protokol" placeholder="mis. KEPK-2026-014" />
+                        <x-mary-input label="No. protokol etik" wire:model="nomor_protokol"
+                            placeholder="mis. KEPK-2026-014" />
                         <x-mary-select label="Jenis telaah" wire:model="jenis_telaah" placeholder="Pilih..."
-                            :options="collect($opsiJenisTelaah)->map(fn ($j) => ['id' => $j->value, 'name' => $j->label()])" />
+                            :options="collect($opsiJenisTelaah)->map(
+                                fn($j) => ['id' => $j->value, 'name' => $j->label()],
+                            )" />
                         <x-mary-input label="Tanggal sidang" wire:model="tanggal_sidang" type="datetime-local" />
                     </div>
-                    <x-mary-choices-offline label="Reviewer" wire:model="reviewerTerpilih"
-                        :options="$reviewerOptions" placeholder="Pilih reviewer..." searchable />
+                    <x-mary-choices-offline label="Reviewer" wire:model="reviewerTerpilih" :options="$reviewerOptions"
+                        placeholder="Pilih reviewer..." searchable />
                     <x-mary-textarea label="Catatan" wire:model="catatan" rows="2"
                         hint="Wajib diisi bila mengembalikan berkas — sebutkan berkas mana yang perlu diperbaiki." />
                     <x-mary-file label="Surat tanggapan untuk peneliti (opsional)" :hint="DocumentType::SuratTanggapan->hintUnggah()"
                         wire:model="fileUpload" accept="application/pdf" />
                     <x-slot:actions>
-                        <x-mary-button label="Tolak Kaji Etik" wire:click="kepkTolak" class="btn-error btn-outline" spinner
-                            wire:confirm="Tolak secara etik? Status ini terminal." />
-                        <x-mary-button label="Minta Revisi Berkas" wire:click="kepkMintaRevisiBerkas" icon="o-arrow-uturn-left"
-                            class="btn-warning" spinner />
-                        <x-mary-button label="Tugaskan Reviewer" wire:click="tugaskanReviewer" icon="o-user-plus" class="btn-primary" spinner />
+                        <x-mary-button label="Tolak Kaji Etik" wire:click="kepkTolak" class="btn-error btn-outline"
+                            spinner wire:confirm="Tolak secara etik? Status ini terminal." />
+                        <x-mary-button label="Minta Revisi Berkas" wire:click="kepkMintaRevisiBerkas"
+                            icon="o-arrow-uturn-left" class="btn-warning" spinner />
+                        <x-mary-button label="Tugaskan Reviewer" wire:click="tugaskanReviewer" icon="o-user-plus"
+                            class="btn-primary" spinner />
                     </x-slot:actions>
                 </x-mary-card>
             @endif
 
-            @if ($isKepk && in_array($proposal->status, [ProposalStatus::MenungguReviewReviewer, ProposalStatus::DisetujuiReviewer], true))
-                <x-mary-card title="Keputusan KEPK" subtitle="Rekap tanggapan reviewer — identitas reviewer tidak diteruskan ke peneliti" shadow>
+            @if (
+                $isKepk &&
+                    in_array($proposal->status, [ProposalStatus::MenungguReviewReviewer, ProposalStatus::DisetujuiReviewer], true))
+                <x-mary-card title="Keputusan KEPK"
+                    subtitle="Rekap tanggapan reviewer — identitas reviewer tidak diteruskan ke peneliti" shadow>
                     <table class="table table-sm mb-3">
-                        <thead><tr><th>Reviewer</th><th>Status</th></tr></thead>
-                        <tbody>
-                        @foreach ($assignments as $a)
+                        <thead>
                             <tr>
-                                <td>{{ $a->reviewer?->name }}</td>
-                                <td><span class="badge badge-sm {{ ['menunggu' => 'badge-neutral', 'acc' => 'badge-success', 'revisi' => 'badge-warning'][$a->status] }}">{{ $a->status }}</span></td>
+                                <th>Reviewer</th>
+                                <th>Status</th>
                             </tr>
-                        @endforeach
+                        </thead>
+                        <tbody>
+                            @foreach ($assignments as $a)
+                                <tr>
+                                    <td>{{ $a->reviewer?->name }}</td>
+                                    <td><span
+                                            class="badge badge-sm {{ ['menunggu' => 'badge-neutral', 'acc' => 'badge-success', 'revisi' => 'badge-warning'][$a->status] }}">{{ $a->status }}</span>
+                                    </td>
+                                </tr>
+                            @endforeach
                         </tbody>
                     </table>
                     @php
@@ -320,7 +407,7 @@
                         $masihMenunggu = $assignments->contains('status', 'menunggu');
                     @endphp
 
-                    @if ($masihMenunggu && ! $adaRevisi)
+                    @if ($masihMenunggu && !$adaRevisi)
                         <x-mary-alert icon="o-clock" class="alert-info mb-2">
                             Menunggu tanggapan reviewer. Keputusan (teruskan revisi / lanjut) mengikuti hasil review.
                         </x-mary-alert>
@@ -338,13 +425,15 @@
 
                     <x-slot:actions>
                         @if ($adaRevisi && $proposal->status === ProposalStatus::MenungguReviewReviewer)
-                            <x-mary-button label="Teruskan Revisi ke Peneliti" wire:click="kepkTeruskanRevisi" class="btn-warning" spinner />
+                            <x-mary-button label="Teruskan Revisi ke Peneliti" wire:click="kepkTeruskanRevisi"
+                                class="btn-warning" spinner />
                         @endif
                         @if ($proposal->semuaReviewerAcc())
-                            <x-mary-button label="Lanjut ke Pembayaran" wire:click="kepkLanjut" class="btn-success" spinner />
+                            <x-mary-button label="Lanjut ke Pembayaran" wire:click="kepkLanjut" class="btn-success"
+                                spinner />
                         @endif
-                        <x-mary-button label="Tolak Kaji Etik" wire:click="kepkTolak" class="btn-error btn-outline" spinner
-                            wire:confirm="Tolak secara etik? Status ini terminal." />
+                        <x-mary-button label="Tolak Kaji Etik" wire:click="kepkTolak" class="btn-error btn-outline"
+                            spinner wire:confirm="Tolak secara etik? Status ini terminal." />
                     </x-slot:actions>
                 </x-mary-card>
             @endif
@@ -363,7 +452,7 @@
                  jadi ia tidak boleh menyaingi kartu aksi yang memang menuntut keputusan
                  sekarang. Penerbitannya lama dan sering baru selesai setelah penelitian
                  rampung. --}}
-            @if ($isCru)
+            {{-- @if ($isCru)
                 @php $pksTerakhir = ($dokumen[DocumentType::Pks->value] ?? collect())->first(); @endphp
                 <x-mary-card title="Perjanjian Kerjasama (PKS)"
                     subtitle="Diunggah CRU — tidak mengubah status dan tidak menahan tahap mana pun" shadow>
@@ -386,7 +475,7 @@
                         </x-slot:actions>
                     </x-mary-form>
                 </x-mary-card>
-            @endif
+            @endif --}}
         </div>
 
         {{-- Kolom kanan: riwayat --}}
@@ -396,11 +485,14 @@
                     @foreach ($reviews as $r)
                         <div class="py-2 border-b border-base-200 last:border-0 text-sm">
                             <div class="flex justify-between">
-                                <span class="font-medium">Ronde {{ $r->ronde }} · {{ strtoupper($r->keputusan) }}</span>
+                                <span class="font-medium">Ronde {{ $r->ronde }} ·
+                                    {{ strtoupper($r->keputusan) }}</span>
                                 <span class="text-xs opacity-60">{{ $r->created_at->format('d/m/Y') }}</span>
                             </div>
                             <div class="text-xs opacity-60">{{ $r->reviewer?->name }}</div>
-                            @if ($r->komentar)<div class="mt-1">{{ $r->komentar }}</div>@endif
+                            @if ($r->komentar)
+                                <div class="mt-1">{{ $r->komentar }}</div>
+                            @endif
                         </div>
                     @endforeach
                 </x-mary-card>
@@ -410,20 +502,53 @@
                 <ul class="timeline timeline-vertical timeline-compact">
                     @foreach ($history as $h)
                         <li>
-                            @if (! $loop->first)<hr>@endif
-                            <div class="timeline-middle"><x-mary-icon name="o-check-circle" class="w-4 h-4 text-primary" /></div>
+                            @if (!$loop->first)
+                                <hr>
+                            @endif
+                            <div class="timeline-middle"><x-mary-icon name="o-check-circle"
+                                    class="w-4 h-4 text-primary" /></div>
                             <div class="timeline-end text-xs pb-3">
                                 <div class="font-medium">{{ $h->to_status->value }}</div>
                                 {{-- Kerahasiaan: nama reviewer disamarkan bagi yang tak berwenang --}}
                                 <div class="opacity-60">{{ $h->created_at->format('d/m/Y H:i') }} ·
-                                    {{ ! $bolehLihatReview && $h->actor?->hasRole('reviewer') ? 'Reviewer' : ($h->actor?->name ?? 'Sistem') }}</div>
-                                @if ($h->catatan)<div class="italic opacity-80">{{ $h->catatan }}</div>@endif
+                                    {{ !$bolehLihatReview && $h->actor?->hasRole('reviewer') ? 'Reviewer' : $h->actor?->name ?? 'Sistem' }}
+                                </div>
+                                @if ($h->catatan)
+                                    <div class="italic opacity-80">{{ $h->catatan }}</div>
+                                @endif
                             </div>
-                            @if (! $loop->last)<hr>@endif
+                            @if (!$loop->last)
+                                <hr>
+                            @endif
                         </li>
                     @endforeach
                 </ul>
             </x-mary-card>
+
+            @if ($isCru)
+                @php $pksTerakhir = ($dokumen[DocumentType::Pks->value] ?? collect())->first(); @endphp
+                <x-mary-card title="Perjanjian Kerjasama (PKS)"
+                    subtitle="Diunggah CRU — tidak mengubah status dan tidak menahan tahap mana pun" shadow>
+                    @if ($pksTerakhir)
+                        <x-mary-alert icon="o-check-circle" class="alert-success mb-3">
+                            Terunggah v{{ $pksTerakhir->versi }} · {{ $pksTerakhir->nama_asli }} ·
+                            {{ $pksTerakhir->created_at->format('d/m/Y H:i') }}
+                        </x-mary-alert>
+                    @else
+                        <x-mary-alert icon="o-clock" class="alert-warning mb-3">
+                            Belum ada PKS. Boleh menyusul — proposal tetap bisa jalan tanpa berkas ini.
+                        </x-mary-alert>
+                    @endif
+                    <x-mary-form wire:submit="unggahPks">
+                        <x-mary-file :label="$pksTerakhir ? 'Unggah versi baru' : 'Berkas PKS'" :hint="DocumentType::Pks->hintUnggah()" wire:model="filePks"
+                            accept="application/pdf" />
+                        <x-slot:actions>
+                            <x-mary-button label="Simpan PKS" type="submit" class="btn-primary"
+                                spinner="unggahPks" />
+                        </x-slot:actions>
+                    </x-mary-form>
+                </x-mary-card>
+            @endif
         </div>
     </div>
 </div>

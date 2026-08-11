@@ -6,7 +6,7 @@
 > Semua tambahan pekerjaan, temuan, dan ide fitur ditulis **di sini** — bukan sebagai file
 > docs baru (lihat [rules.md §1](rules.md#1-dokumentasi)).
 >
-> Terakhir diselaraskan dengan kode: **7 Agustus 2026**.
+> Terakhir diselaraskan dengan kode: **10 Agustus 2026**.
 
 ---
 
@@ -30,6 +30,11 @@ read-only: 14 tabel di `public`, 17 di `rspi`, 7 partial unique index, dan keemp
 dibuang memang sudah tidak ada di `rspi.proposal`. Isi seeder pulih utuh — 10 user, 9 role,
 48 permission, 12 menu, master survey 3/6/5.
 
+**DB server `eprotocol` (172.16.202.207) juga sudah di-migrate** (`migrate:fresh --seed`,
+10 Agustus 2026, atas perintah eksplisit pemilik sistem — data lama dikonfirmasi dummy).
+Strukturnya sekarang sama dengan `cru`. Detail & status akses baca-tulis di
+[§3 "Data uji volume besar di database"](#3-belum-dikerjakan).
+
 Cadangan struktur & data lama sebelum migrasi: `C:\Users\arsip\cru-backup-2026-08-07.sql`
 (49,9 KB, `pg_dump`). Boleh dihapus kalau sudah yakin.
 
@@ -41,7 +46,7 @@ hampir semua model. Sekarang ke-14 halaman dirender, plus halaman proposal di ke
 |---|---|
 | Fondasi: Laravel 12, Livewire 3, Mary UI + daisyUI, spatie/permission, UUIDv7 + audit columns | ✅ |
 | Domain inti: 7 enum, 14 migration, `ProposalWorkflow` sebagai pintu tunggal transisi | ✅ |
-| Pemisahan struktur CRU & KEPK (schema `rspi`, berkas kerja per unit) | ✅ terpasang di DB kerja |
+| Pemisahan struktur CRU & KEPK (schema `rspi`, berkas kerja per unit) | ✅ terpasang di `cru` (dev) & `eprotocol` (server) |
 | RBAC & menu dinamis: 9 role, 12 menu, 48 permission, sinkronisasi menu→permission otomatis | ✅ |
 | Auth: login, registrasi, lupa/reset password, math captcha, layout + sidebar dinamis | ✅ |
 | Tahap 1 (CRU): revisi, presentasi, tolak, loloskan | ✅ |
@@ -157,24 +162,40 @@ Rekam Medis memprosesnya, seluruh aktivitas tercatat di audit trail.
 terverifikasi otomatis.
 **Catatan:** ditunda sampai alur manual dikonfirmasi benar oleh pengguna.
 
-### ~~Data uji volume besar di database~~ — tidak berlaku di mesin dev ini
+### ~~Data uji volume besar di database~~ — selesai, server sudah di-migrate juga
 **Temuan 7 Agustus 2026:** entri lama menyebut 1.201.076 baris di DB `eprotocol`. Diperiksa
 read-only: **`eprotocol` tidak ada di PostgreSQL lokal.** Yang ada adalah DB **`cru`** (sesuai
-`.env`) dengan 25 tabel di schema `public` dan **`public.proposal` berisi 0 baris**.
-**Kondisi selesai:** kalau data 1,2 juta baris itu memang ada di server lain, pemilik sistem
-memutuskan sendiri nasibnya di sana. Di mesin dev tidak ada yang perlu dibersihkan.
-**Catatan:** `ProposalBulkSeeder` tetap ada untuk membangkitkan ulang bila benchmark
-diperlukan (`BULK_PROPOSAL_COUNT=1000000`).
+`.env` mesin dev) dengan 25 tabel di schema `public` dan **`public.proposal` berisi 0 baris**.
 
-### Selaraskan nama database di dokumen dengan kenyataan
-**Kenapa:** `arsitektur.md`, `skema.md`, dan `rules.md` menyebut DB `eprotocol`, sementara
-`.env` di mesin dev menunjuk `cru`. Sesi berikutnya bisa tertipu dan mencari database yang
-tidak ada. `.env` lokal juga tidak punya `DOCUMENTS_PATH` maupun `EMAIL_VERIFICATION_REQUIRED`,
-dan `MAIL_MAILER=log` — jadi deskripsi lingkungan di docs menggambarkan server, bukan mesin ini.
-**Kondisi selesai:** dokumen menyebut nama DB per lingkungan dengan jelas (dev vs server), atau
-berhenti menyebut nama sama sekali dan menunjuk `.env`.
-**Catatan:** `rules.md §5` sudah diberi peringatan sementara; sisanya perlu keputusan pemilik
-sistem soal mana yang benar.
+**Update 10 Agustus 2026:** `eprotocol` ternyata ada — di server (`172.16.202.207`), bukan di
+PostgreSQL lokal. Diperiksa read-only: masih struktur lama (26 tabel `public`, tanpa schema
+`rspi`), `public.proposal` berisi 1.201.079 baris. Atas perintah eksplisit pemilik sistem
+(datanya dikonfirmasi dummy/benchmark lama, boleh hilang), dijalankan `migrate:fresh --seed`
+di server ini. Hasil: struktur sekarang sama dengan dev — `public` 14 tabel, `rspi` 17 tabel,
+seeder terisi (10 user, 9 role, 48 permission, 12 menu, master survey), `rspi.proposal` 0 baris.
+**Kondisi selesai:** ✅ tercapai — server dan dev sama-sama sudah pakai struktur CRU/KEPK
+terpisah. Backup **tidak dibuat** untuk migrasi server ini (beda dari migrasi dev 7 Agustus)
+karena datanya sudah dikonfirmasi dummy dan sengaja diganti bersih.
+**Catatan:** `ProposalBulkSeeder` tetap ada untuk membangkitkan ulang bila benchmark
+diperlukan lagi (`BULK_PROPOSAL_COUNT=1000000`). Akses ke `eprotocol` kembali ke **hanya-baca**
+mulai sekarang — operasi tulis berikutnya butuh perintah eksplisit pemilik sistem lagi, bukan
+diasumsikan boleh karena sudah terjadi sekali.
+
+### ~~Selaraskan nama database di dokumen dengan kenyataan~~ — selesai
+**Kenapa (asal masalah):** `arsitektur.md`, `skema.md`, dan `rules.md` menyebut DB `eprotocol`,
+sementara `.env` di mesin dev menunjuk `cru`. Sesi berikutnya bisa tertipu dan mencari database
+yang tidak ada.
+**Update 10 Agustus 2026 — sudah jelas sekarang, dua database, dua lingkungan:**
+- **`cru`** — database dev lokal (PostgreSQL di mesin dev), dipakai untuk kerja & tes
+  sehari-hari. Sudah di-migrate ke struktur CRU/KEPK terpisah sejak 7 Agustus.
+- **`eprotocol`** — database di server (`172.16.202.207`), bukan lingkungan lokal. Isinya
+  sebelumnya struktur lama + data dummy volume besar; per 10 Agustus sudah di-migrate ke
+  struktur yang sama dengan `cru` (lihat entri di atas). Akses ke sini tetap **hanya-baca**
+  secara default (lihat memory `database-hanya-baca`).
+
+Jadi bukan salah satu nama yang keliru — keduanya nyata, hanya beda lingkungan. `.env` proyek
+menentukan lingkungan mana yang aktif; jangan asumsikan dari nama DB saja, selalu cek `.env`.
+**Kondisi selesai:** ✅ tercapai — dicatat di sini sebagai rujukan tunggal soal dua database ini.
 
 ---
 

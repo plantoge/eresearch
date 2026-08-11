@@ -16,6 +16,34 @@
         window.applyTheme();
         document.addEventListener('livewire:navigated', window.applyTheme);
     </script>
+    {{-- Unggahan sementara Livewire yang gagal (berkas melebihi batas server,
+         sesi kedaluwarsa, koneksi putus) sebelumnya tidak terlihat sama sekali:
+         berkasnya mati di jalan, properti komponen tetap kosong, lalu form
+         menuduh "required" saat submit — gejala yang menyesatkan karena tidak
+         menyebut penyebab sebenarnya. Lihat arsitektur.md §4 (batas upload).
+         Ditaruh di head bersama script tema: wire:navigate tidak menjalankan
+         ulang script head, jadi listener tidak pernah terdaftar dua kali. --}}
+    @php
+        // Payload toast Mary menerima HTML ikon, bukan nama ikon — dirender
+        // dengan cara yang sama seperti Mary\Traits\Toast melakukannya.
+        $ikonGagalUnggah = Blade::render("<x-mary-icon class='w-7 h-7' name='o-exclamation-triangle' />");
+    @endphp
+    <script>
+        window.addEventListener('livewire-upload-error', function () {
+            if (! window.toast) return;
+
+            window.toast({
+                toast: {
+                    type: 'error',
+                    title: 'Berkas gagal diunggah',
+                    description: 'Ukurannya mungkin melebihi batas server, atau koneksi terputus. Coba berkas yang lebih kecil.',
+                    icon: @js($ikonGagalUnggah),
+                    css: 'alert-error',
+                    timeout: 8000,
+                },
+            });
+        });
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen font-sans antialiased bg-base-200/50">

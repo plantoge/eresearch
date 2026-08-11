@@ -13,7 +13,12 @@
       "WebSearch",
       "Bash(grep -c '\"php\"\\\\|\\\\.php' /dev/null 2>/dev/null; echo skip)",
       "Read(//dev/**)",
-      "Bash(python -c \"import json; d=json.load\\(open\\('graphify-out/.graphify_chunk_01.json', encoding='utf-8'\\)\\); print\\('nodes:', len\\(d['nodes']\\)\\); print\\('edges:', len\\(d['edges']\\)\\); print\\('hyperedges:', len\\(d['hyperedges']\\)\\); ids={n['id'] for n in d['nodes']}; print\\('dup node ids:', len\\(d['nodes']\\)-len\\(ids\\)\\); bad=[e for e in d['edges'] if e['source'] not in ids or e['target'] not in ids]; print\\('bad edges:', len\\(bad\\)\\); print\\(bad[:5]\\)\")"
+      "Bash(python -c \"import json; d=json.load\\(open\\('graphify-out/.graphify_chunk_01.json', encoding='utf-8'\\)\\); print\\('nodes:', len\\(d['nodes']\\)\\); print\\('edges:', len\\(d['edges']\\)\\); print\\('hyperedges:', len\\(d['hyperedges']\\)\\); ids={n['id'] for n in d['nodes']}; print\\('dup node ids:', len\\(d['nodes']\\)-len\\(ids\\)\\); bad=[e for e in d['edges'] if e['source'] not in ids or e['target'] not in ids]; print\\('bad edges:', len\\(bad\\)\\); print\\(bad[:5]\\)\")",
+      "Bash(graphify query *)",
+      "Bash(graphify explain *)",
+      "Bash(php -i)",
+      "Read(//c/laragon/bin/php/php-8.4.12-nts-Win32-vs17-x64/**)",
+      "Bash(grep -n 'mary-toast\\\\|addEventListener\\\\|window.addEventListener\\\\|$dispatch\\\\|x-on:' d:/app/cru/vendor/robsontenorio/mary/src/View/Components/Toast.php)"
     ]
   },
   "hooks": {
