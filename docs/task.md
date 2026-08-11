@@ -6,7 +6,7 @@
 > Semua tambahan pekerjaan, temuan, dan ide fitur ditulis **di sini** — bukan sebagai file
 > docs baru (lihat [rules.md §1](rules.md#1-dokumentasi)).
 >
-> Terakhir diselaraskan dengan kode: **10 Agustus 2026**.
+> Terakhir diselaraskan dengan kode: **11 Agustus 2026**.
 
 ---
 
@@ -57,6 +57,7 @@ hampir semua model. Sekarang ke-14 halaman dirender, plus halaman proposal di ke
 | Penyimpanan file di luar folder aplikasi (disk `dokumen`, privat) | ✅ |
 | Email Resend + template email kustom (verifikasi & reset password) | ✅ — `EMAIL_VERIFICATION_REQUIRED=true` di `.env`, pengirim `simrs@suliantisarosohospital.com` |
 | Dashboard per role, halaman Laporan, Audit Log, Profil | ✅ |
+| Notifikasi Telegram ke grup staf untuk aksi peneliti | ✅ kode selesai — **belum diuji di server**, toggle masih `false` |
 | Chat real-time (Reverb) | ❌ dihapus permanen — lihat §4 |
 
 ---
@@ -76,6 +77,32 @@ mengerjakan tanpa menebak:
 ---
 
 ## 3. Belum Dikerjakan
+
+### Nyalakan notifikasi Telegram di server
+**Kenapa:** kodenya sudah jadi dan tertutup tes, tapi `TELEGRAM_NOTIFIKASI_AKTIF` masih
+`false` dan belum ada bot/grup sungguhan. Sampai itu diisi, fiturnya tidak melakukan apa pun.
+Sama seperti email, pengirimannya juga bergantung **queue worker yang berjalan** — tanpa
+worker gejalanya "tidak ada error, tapi notifikasi tidak muncul di grup".
+**Kondisi selesai:** satu aksi peneliti di server memunculkan pesan di grup Telegram,
+isinya kode + status + unit + link, dan **tanpa** judul penelitian maupun nama peneliti.
+**Catatan:** langkah `@BotFather`, cara ambil `chat_id`, dan perilaku saat gagal ada di
+[arsitektur.md §5](arsitektur.md#5-autentikasi-email--captcha). Kalau worker bermasalah,
+`QUEUE_CONNECTION=sync` menjalankannya inline tanpa ubah kode. Siapa saja yang boleh masuk
+grup itu perlu diputuskan dulu — isinya kode proposal dan link, jadi anggotanya sebaiknya
+terbatas staf CRU/KEPK.
+
+### Halaman akses mudah untuk reviewer
+**Kenapa:** reviewer rata-rata sudah sepuh dan kesulitan dengan email + password + captcha,
+sehingga proposal tertahan bukan karena telaahnya berat tapi karena login-nya menyusahkan.
+**Kondisi selesai:** reviewer bisa masuk ke daftar proposal yang ditugaskan padanya cukup
+dengan mengetik PIN 6 angka.
+**Catatan:** rancangannya sudah dibahas dan **belum ditulis jadi spec**. Arah yang disepakati:
+kartu cetak ber-QR (link personal permanen) sebagai pembawa identitas + PIN 6 angka sebagai
+rahasia — pola token, tapi tokennya kertas. PIN satu kolom tanpa identitas **ditolak**: tanpa
+kolom identitas, rate-limit per akun mustahil, dan ruang tebakan terbagi jumlah reviewer
+sehingga sistem justru makin rapuh saat penggunanya makin banyak. OTP Telegram juga ditolak —
+bot tidak bisa mengirim ke orang yang belum pernah chat duluan, jadi onboarding-nya malah
+lebih berat daripada login yang mau digantikan.
 
 ### Pemantauan PKS yang belum terbit
 **Kenapa:** sejak PKS dilepas dari syarat Tahap 2, **tidak ada apa pun yang memaksa PKS pernah
