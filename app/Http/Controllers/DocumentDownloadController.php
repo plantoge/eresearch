@@ -16,6 +16,11 @@ class DocumentDownloadController extends Controller
      *
      * Tidak ada lagi penyaringan berkas rahasia di sini: file tanggapan reviewer
      * tidak pernah masuk tabel ini (lihat DokumenTelaahDownloadController).
+     *
+     * `?baca=1` menyajikan berkas inline (Content-Disposition: inline) alih-alih
+     * memaksa unduh, supaya halaman reviewer bisa menampilkannya di dalam iframe
+     * tanpa membuka tab baru. Otorisasinya SATU jalur dengan unduhan biasa —
+     * mode baca hanya mengubah cara berkas disajikan, bukan siapa yang boleh.
      */
     public function __invoke(Request $request, ProposalDocument $document)
     {
@@ -35,6 +40,12 @@ class DocumentDownloadController extends Controller
         }
 
         abort_unless(Storage::disk('dokumen')->exists($document->path), 404);
+
+        if ($request->boolean('baca')) {
+            return Storage::disk('dokumen')->response($document->path, $document->nama_asli, [
+                'Content-Disposition' => 'inline; filename="'.addslashes($document->nama_asli).'"',
+            ]);
+        }
 
         return Storage::disk('dokumen')->download($document->path, $document->nama_asli);
     }

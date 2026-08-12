@@ -58,6 +58,7 @@ hampir semua model. Sekarang ke-14 halaman dirender, plus halaman proposal di ke
 | Email Resend + template email kustom (verifikasi & reset password) | ✅ — `EMAIL_VERIFICATION_REQUIRED=true` di `.env`, pengirim `simrs@suliantisarosohospital.com` |
 | Dashboard per role, halaman Laporan, Audit Log, Profil | ✅ |
 | Notifikasi Telegram ke grup staf untuk aksi peneliti | ✅ kode selesai — **belum diuji di server**, toggle masih `false` |
+| Halaman satu-layar untuk reviewer (`/reviewer/telaah`) — cari, buka, telaah tanpa pindah halaman | ✅ |
 | Chat real-time (Reverb) | ❌ dihapus permanen — lihat §4 |
 
 ---
@@ -90,19 +91,6 @@ isinya kode + status + unit + link, dan **tanpa** judul penelitian maupun nama p
 `QUEUE_CONNECTION=sync` menjalankannya inline tanpa ubah kode. Siapa saja yang boleh masuk
 grup itu perlu diputuskan dulu — isinya kode proposal dan link, jadi anggotanya sebaiknya
 terbatas staf CRU/KEPK.
-
-### Halaman akses mudah untuk reviewer
-**Kenapa:** reviewer rata-rata sudah sepuh dan kesulitan dengan email + password + captcha,
-sehingga proposal tertahan bukan karena telaahnya berat tapi karena login-nya menyusahkan.
-**Kondisi selesai:** reviewer bisa masuk ke daftar proposal yang ditugaskan padanya cukup
-dengan mengetik PIN 6 angka.
-**Catatan:** rancangannya sudah dibahas dan **belum ditulis jadi spec**. Arah yang disepakati:
-kartu cetak ber-QR (link personal permanen) sebagai pembawa identitas + PIN 6 angka sebagai
-rahasia — pola token, tapi tokennya kertas. PIN satu kolom tanpa identitas **ditolak**: tanpa
-kolom identitas, rate-limit per akun mustahil, dan ruang tebakan terbagi jumlah reviewer
-sehingga sistem justru makin rapuh saat penggunanya makin banyak. OTP Telegram juga ditolak —
-bot tidak bisa mengirim ke orang yang belum pernah chat duluan, jadi onboarding-nya malah
-lebih berat daripada login yang mau digantikan.
 
 ### Pemantauan PKS yang belum terbit
 **Kenapa:** sejak PKS dilepas dari syarat Tahap 2, **tidak ada apa pun yang memaksa PKS pernah
@@ -239,3 +227,10 @@ Jangan dibuka lagi tanpa alasan baru:
   internal, disk `dokumen` lokal sudah cukup. Jalur upgrade: ganti definisi disk saja.
 - **Filament** — tidak dipakai (preferensi tim); **Flux UI** — berbayar.
 - **2FA pada login** — tidak dipakai.
+- **Login QR + PIN untuk reviewer** — ide lama (belum sempat jadi spec) untuk mengganti
+  email+password reviewer dengan kartu ber-QR + PIN 6 angka. Diganti pendekatan lain:
+  login tetap email+password+captcha, tapi setelah masuk reviewer langsung mendarat di
+  satu halaman sederhana (`/reviewer/telaah`, 12 Agustus 2026) — cari, buka, telaah, semua
+  tanpa pindah halaman. Menyelesaikan masalah yang sama (reviewer sepuh kesulitan navigasi)
+  tanpa mengubah cara autentikasi. Lihat
+  [.claude/specs/2026-08-12-halaman-reviewer-sederhana.md](../.claude/specs/2026-08-12-halaman-reviewer-sederhana.md).

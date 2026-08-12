@@ -91,6 +91,13 @@ PHP='/c/laragon/bin/php/php-8.4.12-nts-Win32-vs17-x64/php.exe'
   create database cru_test;
   ```
   Efek sampingannya bagus — `pg_advisory_xact_lock()` di `generateKode()` akhirnya ikut teruji.
+- **Jangan menjalankan `php artisan optimize` atau `config:cache` di mesin kerja.** Begitu
+  `bootstrap/cache/config.php` ada, Laravel berhenti membaca `env()` — seluruh blok `<env>`
+  di `phpunit.xml` (`DB_DATABASE=cru_test`, `QUEUE_CONNECTION=sync`) diabaikan **diam-diam**.
+  Tesnya tetap hijau tapi jalan di atas database pengembangan, dan `RefreshDatabase` menjalankan
+  `migrate:fresh` di sana — persis yang dilarang §5 di bawah. Ini pernah terjadi (12 Agustus
+  2026, isi `eresearch` hilang). `Tests\TestCase` sekarang menghentikan tes bila database
+  tujuannya bukan `cru_test`; kalau pesan itu muncul, jalankan `php artisan config:clear`.
 - Satu pekerjaan selesai = satu commit, dengan pesan yang menjelaskan perubahan.
 
 ---

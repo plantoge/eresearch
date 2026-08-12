@@ -55,6 +55,11 @@ Route::middleware(['auth', 'verified.optional'])->group(function () {
     Route::get('/antrian/reviewer', Livewire\Antrian\Reviewer::class)
         ->middleware('permission:antrian-reviewer.read')->name('antrian.reviewer');
 
+    // Halaman satu-layar untuk reviewer (dokter senior) — tambahan, TIDAK
+    // menggantikan "Antrian Reviewer" di atas. Lihat .claude/specs/2026-08-12-halaman-reviewer-sederhana.md
+    Route::get('/reviewer/telaah', Livewire\Reviewer\TelaahSederhana::class)
+        ->middleware('permission:antrian-reviewer.read')->name('reviewer.telaah');
+
     // Admin
     Route::get('/admin/users', Livewire\Admin\Users::class)
         ->middleware('permission:users.read')->name('admin.users');

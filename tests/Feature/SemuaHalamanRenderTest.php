@@ -41,7 +41,7 @@ class SemuaHalamanRenderTest extends TestCase
         $halaman = [
             '/dashboard', '/profile',
             '/proposal', '/proposal/baru',
-            '/antrian/cru', '/antrian/kaji-etik', '/antrian/reviewer',
+            '/antrian/cru', '/antrian/kaji-etik', '/antrian/reviewer', '/reviewer/telaah',
             '/admin/users', '/admin/roles', '/admin/menus', '/admin/survey', '/admin/kontak',
             '/laporan', '/audit-log',
         ];

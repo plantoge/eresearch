@@ -34,6 +34,14 @@ class MenuSeeder extends Seeder
             ['Antrian Reviewer', 'antrian-reviewer', 'antrian.reviewer', 'o-clipboard-document-check', [
                 'superadmin' => 'crud', 'reviewer' => ['read', 'update'],
             ]],
+            // Halaman satu-layar untuk reviewer (dokter senior) — TAMBAHAN, bukan
+            // pengganti "Antrian Reviewer" di atas. Route-nya tetap dilindungi
+            // permission antrian-reviewer.*; slug menu ini hanya untuk filter
+            // sidebar. Sengaja tidak diberikan ke superadmin — admin/QA pakai
+            // jalur lama. Lihat .claude/specs/2026-08-12-halaman-reviewer-sederhana.md
+            ['Telaah Proposal (Sederhana)', 'reviewer-telaah', 'reviewer.telaah', 'o-document-magnifying-glass', [
+                'reviewer' => ['read', 'update'],
+            ]],
             ['Users', 'users', 'admin.users', 'o-users', [
                 'superadmin' => 'crud',
             ]],

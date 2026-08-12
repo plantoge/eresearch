@@ -59,6 +59,18 @@ class Login extends Component
 
         session()->regenerate();
 
+        $user = Auth::user();
+
+        // Reviewer (dokter senior, gaptek) yang login biasa dari /login — tanpa
+        // deep-link — mendarat langsung di halaman satu-layar, bukan dashboard.
+        // Deep-link (url.intended) selalu menang: jangan buang konteks orang yang
+        // datang lewat link proposal spesifik (mis. notifikasi Telegram).
+        if (! session()->has('url.intended')
+            && $user->getRoleNames()->count() === 1
+            && $user->hasRole('reviewer')) {
+            return redirect()->route('reviewer.telaah');
+        }
+
         return redirect()->intended(route('dashboard'));
     }
 
