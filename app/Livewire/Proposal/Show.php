@@ -122,6 +122,26 @@ class Show extends Component
         return app(ProposalWorkflow::class)->simpanDokumen($this->proposal, $jenis, $file);
     }
 
+    /**
+     * Simpan lampiran surat tanggapan bila petugas melampirkannya.
+     *
+     * Satu kartu aksi punya SATU input berkas tapi beberapa tombol. Dulu hanya
+     * sebagian tombol yang membaca `$fileUpload`, sehingga menekan tombol lain
+     * membuang berkas yang sudah dilampirkan tanpa pesan apa pun — status tetap
+     * berpindah dan dokumennya tidak pernah muncul. Dipanggil dari SEMUA aksi
+     * yang kartunya memuat input berkas, supaya tidak ada lagi tombol yang
+     * diam-diam membuang lampiran.
+     */
+    protected function simpanLampiranOpsional(): void
+    {
+        if (! $this->fileUpload) {
+            return;
+        }
+
+        $this->validate(['fileUpload' => DocumentType::SuratTanggapan->aturanValidasi()]);
+        $this->simpanFile(DocumentType::SuratTanggapan, $this->fileUpload);
+    }
+
     // ============ Aksi Peneliti ============
 
     /** Perbaiki proposal (T1): re-upload → Menunggu Verifikasi Revisi. */
@@ -324,10 +344,7 @@ class Show extends Component
     {
         abort_unless(auth()->user()->can('antrian-cru.update'), 403);
 
-        if ($this->fileUpload) {
-            $this->validate(['fileUpload' => DocumentType::SuratTanggapan->aturanValidasi()]);
-            $this->simpanFile(DocumentType::SuratTanggapan, $this->fileUpload);
-        }
+        $this->simpanLampiranOpsional();
 
         $this->catatVerifikasiCru();
         $this->pindah(ProposalStatus::PerluRevisiProposal, $this->catatan);
@@ -341,6 +358,8 @@ class Show extends Component
             'kategori_presentasi' => 'required|string',
             'media_presentasi' => 'required|string',
         ]);
+
+        $this->simpanLampiranOpsional();
 
         $this->berkasCru()->update([
             'tanggal_presentasi' => $this->tanggal_presentasi,
@@ -364,6 +383,7 @@ class Show extends Component
     public function loloskan()
     {
         abort_unless(auth()->user()->can('antrian-cru.update'), 403);
+        $this->simpanLampiranOpsional();
         $this->catatVerifikasiCru();
         $this->pindah(ProposalStatus::MenungguKelengkapanBerkasEtik, $this->catatan ?: 'Lolos ke KEPK');
     }
@@ -513,10 +533,7 @@ class Show extends Component
         abort_unless(auth()->user()->can('kaji-etik.update'), 403);
         $this->validate(['catatan' => 'required|string'], [], ['catatan' => 'catatan perbaikan berkas']);
 
-        if ($this->fileUpload) {
-            $this->validate(['fileUpload' => DocumentType::SuratTanggapan->aturanValidasi()]);
-            $this->simpanFile(DocumentType::SuratTanggapan, $this->fileUpload);
-        }
+        $this->simpanLampiranOpsional();
 
         $this->pindah(ProposalStatus::PerluRevisiBerkasEtik, $this->catatan);
     }
@@ -537,10 +554,7 @@ class Show extends Component
         $this->validate(['catatan' => 'required|string'], [], ['catatan' => 'catatan untuk peneliti']);
 
         // Surat tanggapan resmi KEPK untuk peneliti (opsional, terlihat peneliti)
-        if ($this->fileUpload) {
-            $this->validate(['fileUpload' => DocumentType::SuratTanggapan->aturanValidasi()]);
-            $this->simpanFile(DocumentType::SuratTanggapan, $this->fileUpload);
-        }
+        $this->simpanLampiranOpsional();
 
         $this->pindah(ProposalStatus::PerluRevisiReviewer, $this->catatan);
     }
@@ -550,6 +564,8 @@ class Show extends Component
     {
         abort_unless(auth()->user()->can('kaji-etik.update'), 403);
         abort_unless($this->proposal->semuaReviewerAcc(), 403, 'Belum semua reviewer memberikan ACC');
+
+        $this->simpanLampiranOpsional();
 
         $this->simpanProtokolEtik([
             'keputusan' => KeputusanEtik::Layak->value,
@@ -564,6 +580,8 @@ class Show extends Component
     {
         abort_unless(auth()->user()->can('kaji-etik.update'), 403);
         $this->validate(['catatan' => 'required|string'], [], ['catatan' => 'alasan penolakan']);
+
+        $this->simpanLampiranOpsional();
 
         TelaahReviewer::create([
             'proposal_id' => $this->proposal->id,
