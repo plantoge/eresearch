@@ -3,6 +3,7 @@
 namespace App\Livewire\Reviewer;
 
 use App\Enums\DocumentType;
+use App\Models\DokumenTelaah;
 use App\Models\PenugasanReviewer;
 use App\Models\Proposal;
 use App\Models\ProposalDocument;
@@ -127,17 +128,31 @@ class TelaahSederhana extends Component
      */
     public function mintaKonfirmasi(): void
     {
+        $aturan = [
+            'keputusan' => 'required|in:approve,revise',
+            // Komentar wajib hanya saat minta revisi (PRD §15).
+            'catatan' => $this->keputusan === 'revise' ? 'required|string|min:3' : 'nullable|string',
+        ];
+
+        // Lampiran divalidasi dengan aturan yang SAMA dengan Proposal\Show.
+        // Tanpa ini, berkas sementara Livewire yang sudah kedaluwarsa lolos
+        // sampai ke Flysystem dan meledak jadi `UnableToRetrieveMetadata` —
+        // layar error, bukan pesan. Penjaganya ada di dalam konstanta itu
+        // (`bail|berkas_ada`), jadi tidak perlu diulang di sini.
+        if ($this->fileUpload) {
+            $aturan['fileUpload'] = DokumenTelaah::ATURAN_VALIDASI;
+        }
+
         $this->validate(
-            [
-                'keputusan' => 'required|in:approve,revise',
-                // Komentar wajib hanya saat minta revisi (PRD §15).
-                'catatan' => $this->keputusan === 'revise' ? 'required|string|min:3' : 'nullable|string',
-            ],
+            $aturan,
             [
                 'keputusan.required' => 'Pilih dulu hasil review: Perlu Revisi atau Disetujui.',
                 'catatan.required' => 'Tuliskan catatan untuk peneliti bila proposal perlu direvisi.',
+                'fileUpload.file' => 'Berkas tanggapan gagal diunggah atau kedaluwarsa. Pilih berkasnya sekali lagi.',
+                'fileUpload.mimes' => 'Berkas tanggapan harus PDF.',
+                'fileUpload.max' => 'Berkas tanggapan maksimal 10 MB.',
             ],
-            ['keputusan' => 'hasil review', 'catatan' => 'catatan'],
+            ['keputusan' => 'hasil review', 'catatan' => 'catatan', 'fileUpload' => 'berkas tanggapan'],
         );
 
         $this->konfirmasiTampil = true;

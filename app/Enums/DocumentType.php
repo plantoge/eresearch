@@ -73,10 +73,18 @@ enum DocumentType: string
         return [self::FormKajiEtik, self::InformedConsent, self::KerahasiaanData];
     }
 
-    /** Aturan validasi upload Livewire (prd §7c). */
+    /**
+     * Aturan validasi upload Livewire (prd §7c).
+     *
+     * `bail|berkas_ada` di depan bukan hiasan: berkas sementara Livewire yang
+     * sudah kedaluwarsa membuat `mimes`/`max` MELEMPAR `UnableToRetrieveMetadata`
+     * (layar 500) alih-alih gagal rapi — lihat `berkas_ada` di AppServiceProvider.
+     * Karena semua form mengambil aturannya dari sini, satu baris ini menutup
+     * seluruhnya.
+     */
     public function aturanValidasi(): string
     {
-        return match ($this) {
+        return 'bail|berkas_ada|'.match ($this) {
             self::BuktiBayarCru, self::BuktiBayarKepk => 'file|mimes:jpg,jpeg,pdf|max:5120',
             self::RawData => 'file|mimes:xls,xlsx|max:20480',
             default => 'file|mimes:pdf|max:10240',

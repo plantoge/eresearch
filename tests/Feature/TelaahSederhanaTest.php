@@ -337,6 +337,43 @@ class TelaahSederhanaTest extends TestCase
         $this->assertSame(S::MenungguReviewReviewer, $p->fresh()->status);
     }
 
+    public function test_review_bisa_dilampiri_berkas_tanggapan(): void
+    {
+        $p = $this->proposalSiapReview();
+        $this->actingAs($this->kepk);
+        $this->wf->tugaskanReviewer($p, [$this->rev1->id]);
+
+        $this->actingAs($this->rev1);
+        Livewire::test(TelaahSederhana::class)
+            ->call('buka', $p->id)
+            ->call('pilihKeputusan', 'revise')
+            ->set('catatan', 'Perbaiki metodologi')
+            ->set('fileUpload', UploadedFile::fake()->create('tanggapan.pdf', 100, 'application/pdf'))
+            ->call('mintaKonfirmasi')
+            ->call('simpanReview')
+            ->assertHasNoErrors();
+
+        $this->assertSame(1, $p->dokumenTelaah()->count());
+    }
+
+    public function test_lampiran_bukan_pdf_ditolak(): void
+    {
+        $p = $this->proposalSiapReview();
+        $this->actingAs($this->kepk);
+        $this->wf->tugaskanReviewer($p, [$this->rev1->id]);
+
+        $this->actingAs($this->rev1);
+        Livewire::test(TelaahSederhana::class)
+            ->call('buka', $p->id)
+            ->call('pilihKeputusan', 'approve')
+            ->set('fileUpload', UploadedFile::fake()->create('virus.exe', 10))
+            ->call('mintaKonfirmasi')
+            ->assertHasErrors(['fileUpload'])
+            ->assertSet('konfirmasiTampil', false);
+
+        $this->assertSame(0, $p->telaahReviewer()->count());
+    }
+
     public function test_batal_konfirmasi_tidak_menyimpan_dan_tidak_menghapus_komentar(): void
     {
         $p = $this->proposalSiapReview();

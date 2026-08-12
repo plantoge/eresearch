@@ -24,8 +24,12 @@ class DokumenTelaah extends Model
     /**
      * Aturan upload — ditaruh di sini, bukan ditulis ulang di komponen
      * (rules.md §3). Dulu ikut DocumentType::aturanValidasi().
+     *
+     * `bail|berkas_ada` di depan menahan berkas sementara Livewire yang sudah
+     * kedaluwarsa; tanpa itu `mimes`/`max` melempar `UnableToRetrieveMetadata`
+     * dan berujung layar 500 (lihat `berkas_ada` di AppServiceProvider).
      */
-    public const ATURAN_VALIDASI = 'file|mimes:pdf|max:10240';
+    public const ATURAN_VALIDASI = 'bail|berkas_ada|file|mimes:pdf|max:10240';
 
     protected $fillable = [
         'proposal_id', 'telaah_id', 'path', 'nama_asli', 'versi', 'uploaded_by',

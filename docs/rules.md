@@ -91,6 +91,13 @@ PHP='/c/laragon/bin/php/php-8.4.12-nts-Win32-vs17-x64/php.exe'
   create database cru_test;
   ```
   Efek sampingannya bagus — `pg_advisory_xact_lock()` di `generateKode()` akhirnya ikut teruji.
+- **Aturan validasi upload wajib lewat `DocumentType::aturanValidasi()` atau
+  `DokumenTelaah::ATURAN_VALIDASI`** — jangan menulis `'file|mimes:pdf|max:…'` sendiri di
+  komponen. Keduanya diawali `bail|berkas_ada`, penjaga yang menahan berkas sementara Livewire
+  yang sudah kedaluwarsa. Tanpa penjaga itu, `mimes`/`max` memanggil `getMimeType()`/`getSize()`
+  yang membaca disk, dan Flysystem **melempar** `UnableToRetrieveMetadata` alih-alih gagal rapi —
+  pengguna dapat layar 500. Penyebabnya `TemporaryUploadedFile::isValid()` di-hardcode `true`,
+  jadi aturan `file` tidak pernah menyaring apa pun. Terjadi di `/proposal/baru`, 12 Agustus 2026.
 - **Jangan menjalankan `php artisan optimize` atau `config:cache` di mesin kerja.** Begitu
   `bootstrap/cache/config.php` ada, Laravel berhenti membaca `env()` — seluruh blok `<env>`
   di `phpunit.xml` (`DB_DATABASE=cru_test`, `QUEUE_CONNECTION=sync`) diabaikan **diam-diam**.
