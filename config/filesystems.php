@@ -47,9 +47,20 @@ return [
             'report' => false,
         ],
 
-        // Dokumen proposal — di LUAR folder aplikasi (DOCUMENTS_PATH), privat:
-        // tanpa 'url'/'serve', hanya bisa diakses via DocumentDownloadController.
-        'dokumen' => [
+        // Dokumen proposal — privat, hanya bisa diakses via DocumentDownloadController.
+        // DOCUMENTS_DRIVER=local (default, dev/Windows) atau =s3 (MinIO di produksi);
+        // di kedua kasus tanpa 'url', tidak pernah diserve langsung oleh web server.
+        'dokumen' => env('DOCUMENTS_DRIVER', 'local') === 's3' ? [
+            'driver' => 's3',
+            'key' => env('AWS_ACCESS_KEY_ID'),
+            'secret' => env('AWS_SECRET_ACCESS_KEY'),
+            'region' => env('AWS_DEFAULT_REGION'),
+            'bucket' => env('AWS_BUCKET'),
+            'endpoint' => env('AWS_ENDPOINT'),
+            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'throw' => false,
+            'report' => false,
+        ] : [
             'driver' => 'local',
             'root' => env('DOCUMENTS_PATH', storage_path('app/dokumen')),
             'serve' => false,
