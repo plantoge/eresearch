@@ -21,7 +21,8 @@
       "Bash(grep -n 'mary-toast\\\\|addEventListener\\\\|window.addEventListener\\\\|$dispatch\\\\|x-on:' d:/app/cru/vendor/robsontenorio/mary/src/View/Components/Toast.php)",
       "Bash(git checkout *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "PowerShell(graphify query \"penyimpanan file upload proposal disk storage\")"
     ]
   },
   "hooks": {

@@ -51,8 +51,38 @@
             class="input input-bordered w-full h-[56px] pl-13 text-lg bg-base-100">
     </div>
 
+    {{-- ===== Tab daftar: yang menunggu dipisahkan dari yang sudah selesai =====
+         Tombol besar berdampingan, bukan tab tipis: area klik tetap lega
+         (PRD §4.3) dan tab mana yang aktif terbaca dari jauh. --}}
+    <div role="tablist" aria-label="Kelompok proposal" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+        @php
+            $tabs = [
+                'perlu' => ['label' => 'PERLU DIPERIKSA', 'jumlah' => $perluDiperiksa, 'icon' => 'o-clock'],
+                'sudah' => ['label' => 'SUDAH DIPERIKSA', 'jumlah' => $sudahDiperiksa, 'icon' => 'o-check-circle'],
+            ];
+        @endphp
+
+        @foreach ($tabs as $kunci => $t)
+            <button type="button" role="tab" aria-selected="{{ $tab === $kunci ? 'true' : 'false' }}"
+                wire:click="pilihTab('{{ $kunci }}')"
+                class="flex items-center justify-center gap-3 min-h-[64px] px-5 rounded-xl border-2 text-lg font-semibold transition
+                    {{ $tab === $kunci
+                        ? 'bg-primary text-primary-content border-primary'
+                        : 'bg-base-100 border-base-300 hover:border-primary/60 hover:bg-primary/5' }}">
+                <x-mary-icon name="{{ $t['icon'] }}" class="w-6 h-6 shrink-0" />
+                {{ $t['label'] }}
+                <span class="inline-flex items-center justify-center min-w-[2rem] h-8 px-2 rounded-lg text-base font-bold
+                    {{ $tab === $kunci ? 'bg-primary-content/20' : 'bg-base-300' }}">
+                    {{ $t['jumlah'] }}
+                </span>
+            </button>
+        @endforeach
+    </div>
+
     {{-- ===== Daftar proposal (PRD §10) ===== --}}
-    <h2 class="text-base font-bold tracking-wide opacity-70 mb-3">DAFTAR PROPOSAL</h2>
+    <h2 class="text-base font-bold tracking-wide opacity-70 mb-3">
+        {{ $tab === 'sudah' ? 'PROPOSAL YANG SUDAH DIPERIKSA' : 'PROPOSAL YANG PERLU DIPERIKSA' }}
+    </h2>
 
     <div class="space-y-3">
         @forelse ($proposals as $p)
@@ -262,7 +292,13 @@
             <div class="bg-base-100 border border-base-300 rounded-xl py-16 px-6 text-center">
                 @if ($cari)
                     <p class="text-xl font-semibold">Proposal tidak ditemukan</p>
-                    <p class="mt-2 opacity-70">Coba gunakan nama peneliti atau judul penelitian yang berbeda.</p>
+                    <p class="mt-2 opacity-70">
+                        Coba gunakan nama peneliti atau judul penelitian yang berbeda,
+                        atau lihat tab {{ $tab === 'sudah' ? '"Perlu Diperiksa"' : '"Sudah Diperiksa"' }}.
+                    </p>
+                @elseif ($tab === 'sudah')
+                    <p class="text-xl font-semibold">Belum ada proposal yang selesai diperiksa</p>
+                    <p class="mt-2 opacity-70">Hasil review Anda akan muncul di sini setelah disimpan.</p>
                 @else
                     <p class="text-xl font-semibold">Belum ada proposal</p>
                     <p class="mt-2 opacity-70">Saat ini tidak ada proposal yang perlu Anda periksa.</p>

@@ -34,6 +34,17 @@ class TelaahSederhana extends Component
 
     public string $cari = '';
 
+    /**
+     * Tab daftar: 'perlu' = belum diperiksa, 'sudah' = sudah diperiksa
+     * (Disetujui maupun Perlu Revisi). Memisahkan keduanya supaya pekerjaan
+     * yang menunggu tidak tenggelam di antara yang sudah selesai.
+     */
+    public string $tab = self::TAB_PERLU;
+
+    public const TAB_PERLU = 'perlu';
+
+    public const TAB_SUDAH = 'sudah';
+
     public int $perPage = 15;
 
     /** Proposal yang sedang dibuka inline — null = tak ada yang terbuka. */
@@ -62,6 +73,15 @@ class TelaahSederhana extends Component
         $this->perPage += 15;
     }
 
+    public function pilihTab(string $tab): void
+    {
+        abort_unless(in_array($tab, [self::TAB_PERLU, self::TAB_SUDAH], true), 422);
+
+        $this->tab = $tab;
+        $this->perPage = 15;
+        $this->tutupProposal();
+    }
+
     /** Klik baris: buka proposal, atau tutup kalau baris yang sama diklik lagi. */
     public function buka(string $proposalId): void
     {
@@ -73,6 +93,23 @@ class TelaahSederhana extends Component
 
         $this->proposalIdTerbuka = $proposalId;
         $this->resetForm();
+
+        // Panel detail dirender di dalam baris daftarnya. Kalau proposal ini
+        // tidak ada di tab yang sedang tampil, panelnya tak akan terlihat —
+        // jadi tab ikut berpindah ke tempat proposal itu berada.
+        $this->tab = $this->tabUntuk($this->penugasanTerbuka()?->status);
+    }
+
+    /** Tab tempat sebuah penugasan seharusnya muncul. */
+    protected function tabUntuk(?string $statusPenugasan): string
+    {
+        return match ($statusPenugasan) {
+            PenugasanReviewer::ACC, PenugasanReviewer::REVISI => self::TAB_SUDAH,
+            PenugasanReviewer::MENUNGGU => self::TAB_PERLU,
+            // Tanpa penugasan render() sudah membatalkan dengan 403; tab
+            // dibiarkan apa adanya supaya tidak melompat tanpa alasan.
+            default => $this->tab,
+        };
     }
 
     protected function tutupProposal(): void
@@ -192,13 +229,22 @@ class TelaahSederhana extends Component
         $this->success('Review berhasil disimpan. Proposal telah selesai diperiksa.');
         // proposalIdTerbuka sengaja dibiarkan terbuka: panel berganti sendiri
         // ke tampilan hasil (read-only) tanpa reviewer harus mencari ulang.
+        // Proposalnya kini pindah ke tab "Sudah Diperiksa", jadi tabnya ikut —
+        // kalau tidak, panel yang baru saja disimpan hilang dari layar.
+        $this->tab = self::TAB_SUDAH;
     }
 
-    /** Semua penugasan reviewer ini — belum & sudah diperiksa (PRD §10). */
+    /** Penugasan reviewer ini, disaring oleh tab yang sedang aktif (PRD §10). */
     protected function query()
     {
+        $statusTab = $this->tab === self::TAB_SUDAH
+            ? [PenugasanReviewer::ACC, PenugasanReviewer::REVISI]
+            : [PenugasanReviewer::MENUNGGU];
+
         return Proposal::query()
-            ->whereHas('penugasanReviewer', fn ($q) => $q->where('reviewer_id', auth()->id()))
+            ->whereHas('penugasanReviewer', fn ($q) => $q
+                ->where('reviewer_id', auth()->id())
+                ->whereIn('status', $statusTab))
             // Dimuat sekali di sini supaya label status per baris tidak memicu
             // satu query tambahan per proposal saat dirender.
             ->with(['penugasanReviewer' => fn ($q) => $q->where('reviewer_id', auth()->id())])
@@ -230,6 +276,8 @@ class TelaahSederhana extends Component
         // Ringkasan (PRD §8) dihitung dari penugasan, bukan dari daftar yang
         // sedang tampil — angkanya harus benar walau pencarian sedang menyaring
         // atau baris belum semuanya ter-scroll.
+        // Sekaligus jadi angka pada tab — reviewer perlu tahu isi tab sebelah
+        // tanpa harus membukanya.
         $penugasanSaya = PenugasanReviewer::where('reviewer_id', auth()->id());
         $totalProposal = (clone $penugasanSaya)->count();
         $perluDiperiksa = (clone $penugasanSaya)->where('status', PenugasanReviewer::MENUNGGU)->count();

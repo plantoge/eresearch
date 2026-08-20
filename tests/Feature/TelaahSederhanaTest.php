@@ -184,7 +184,110 @@ class TelaahSederhanaTest extends TestCase
         $this->actingAs($this->rev1);
         $this->wf->reviewerMerespons($p, 'approve', 'Setuju');
 
-        Livewire::test(TelaahSederhana::class)->assertSee('Disetujui');
+        // Proposal yang sudah di-ACC pindah ke tab "Sudah Diperiksa".
+        Livewire::test(TelaahSederhana::class)
+            ->call('pilihTab', 'sudah')
+            ->assertSee('Disetujui');
+    }
+
+    // ===== Tab: perlu diperiksa vs sudah diperiksa =====
+
+    public function test_tab_perlu_diperiksa_hanya_menampilkan_yang_belum_direview(): void
+    {
+        $belum = $this->proposalSiapReview('Budi Santoso');
+        $sudah = $this->proposalSiapReview('Siti Aminah');
+
+        $this->actingAs($this->kepk);
+        $this->wf->tugaskanReviewer($belum, [$this->rev1->id]);
+        $this->wf->tugaskanReviewer($sudah, [$this->rev1->id]);
+
+        $this->actingAs($this->rev1);
+        $this->wf->reviewerMerespons($sudah, 'approve', 'Bagus');
+
+        // Tab bawaan = yang masih menunggu pemeriksaan.
+        Livewire::test(TelaahSederhana::class)
+            ->assertSet('tab', 'perlu')
+            ->assertSee('Budi Santoso')
+            ->assertDontSee('Siti Aminah');
+    }
+
+    public function test_tab_sudah_diperiksa_memuat_yang_disetujui_dan_yang_perlu_revisi(): void
+    {
+        $belum = $this->proposalSiapReview('Budi Santoso');
+        $disetujui = $this->proposalSiapReview('Siti Aminah');
+        $revisi = $this->proposalSiapReview('Andi Wijaya');
+
+        $this->actingAs($this->kepk);
+        foreach ([$belum, $disetujui, $revisi] as $p) {
+            $this->wf->tugaskanReviewer($p, [$this->rev1->id]);
+        }
+
+        $this->actingAs($this->rev1);
+        $this->wf->reviewerMerespons($disetujui, 'approve', 'Bagus');
+        $this->wf->reviewerMerespons($revisi, 'revise', 'Perlu perbaikan');
+
+        Livewire::test(TelaahSederhana::class)
+            ->call('pilihTab', 'sudah')
+            ->assertSee('Siti Aminah')
+            ->assertSee('Andi Wijaya')
+            ->assertDontSee('Budi Santoso');
+    }
+
+    public function test_pindah_tab_menutup_proposal_yang_sedang_terbuka(): void
+    {
+        $p = $this->proposalSiapReview();
+        $this->actingAs($this->kepk);
+        $this->wf->tugaskanReviewer($p, [$this->rev1->id]);
+
+        $this->actingAs($this->rev1);
+        Livewire::test(TelaahSederhana::class)
+            ->call('buka', $p->id)
+            ->assertSet('proposalIdTerbuka', $p->id)
+            ->call('pilihTab', 'sudah')
+            ->assertSet('proposalIdTerbuka', null);
+    }
+
+    public function test_tab_tidak_dikenal_ditolak(): void
+    {
+        $this->actingAs($this->rev1);
+        Livewire::test(TelaahSederhana::class)
+            ->call('pilihTab', 'apa-saja')
+            ->assertStatus(422);
+    }
+
+    public function test_setelah_simpan_review_proposal_pindah_ke_tab_sudah_diperiksa(): void
+    {
+        $p = $this->proposalSiapReview();
+        $this->actingAs($this->kepk);
+        $this->wf->tugaskanReviewer($p, [$this->rev1->id]);
+
+        $this->actingAs($this->rev1);
+        Livewire::test(TelaahSederhana::class)
+            ->call('buka', $p->id)
+            ->call('pilihKeputusan', 'approve')
+            ->set('catatan', 'Sudah bagus')
+            ->call('mintaKonfirmasi')
+            ->call('simpanReview')
+            // Tab ikut berpindah supaya panel hasil tetap terlihat, tidak hilang
+            // begitu proposal keluar dari daftar "perlu diperiksa".
+            ->assertSet('tab', 'sudah')
+            ->assertSet('proposalIdTerbuka', $p->id)
+            ->assertSee('Sudah bagus');
+    }
+
+    public function test_membuka_proposal_menyelaraskan_tab_dengan_status_penugasan(): void
+    {
+        $p = $this->proposalSiapReview();
+        $this->actingAs($this->kepk);
+        $this->wf->tugaskanReviewer($p, [$this->rev1->id, $this->rev2->id]);
+
+        $this->actingAs($this->rev1);
+        $this->wf->reviewerMerespons($p, 'approve', 'Bagus sekali');
+
+        Livewire::test(TelaahSederhana::class)
+            ->call('buka', $p->id)
+            ->assertSet('tab', 'sudah')
+            ->assertSee('Bagus sekali');
     }
 
     // ===== Detail proposal & dokumen (PRD §11 & §12) =====
