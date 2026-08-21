@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\DocumentDownloadController;
 use App\Http\Controllers\DokumenTelaahDownloadController;
 use App\Http\Controllers\FormEtikPdfController;
+use App\Http\Controllers\InformedConsentPdfController;
 use App\Livewire;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -86,6 +87,10 @@ Route::middleware(['auth', 'verified.optional'])->group(function () {
     // otorisasinya sama dengan halaman proposal (Proposal::bolehDilihatOleh()).
     Route::get('/proposal/{proposal}/formulir-etik.pdf', FormEtikPdfController::class)
         ->name('formulir-etik.pdf');
+
+    // Lembar Informasi + Lembar Persetujuan kosong untuk dibawa ke lapangan.
+    Route::get('/proposal/{proposal}/informed-consent.pdf', InformedConsentPdfController::class)
+        ->name('informed-consent.pdf');
 
     // Berkas telaah reviewer — route terpisah, tanpa jalur untuk peneliti
     Route::get('/dokumen-telaah/{dokumen}', DokumenTelaahDownloadController::class)

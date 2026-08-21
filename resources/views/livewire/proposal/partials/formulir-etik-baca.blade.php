@@ -90,4 +90,9 @@
             </div>
         </div>
     </div>
+
+    @include('livewire.proposal.partials.tanda-tangan-baca', [
+        'tandaTangan' => $formulir->tanda_tangan,
+        'tanggal' => $formulir->dikirim_pada,
+    ])
 </div>

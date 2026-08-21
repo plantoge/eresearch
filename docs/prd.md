@@ -234,7 +234,7 @@ oleh `ProposalWorkflow::transition()`. Daftar transisi lengkap ada di [skema.md]
 | Jadwalkan → `Menunggu Presentasi` | CRU | tanggal, kategori, media presentasi |
 | Tolak → `Ditolak` | CRU | `surat_penolakan` (wajib) |
 | Loloskan → `Menunggu Kelengkapan Berkas Etik` | CRU | catatan (opsional). Tersedia dari `Menunggu Presentasi` **maupun** `Menunggu Verifikasi Revisi` |
-| Lengkapi etik → `Menunggu Penunjukan Reviewer` | Peneliti | **Formulir Pengajuan Etik** (isian Poin B & C, bukan unggahan) + **informed_consent**, **kerahasiaan_data** (semua wajib) |
+| Lengkapi etik → `Menunggu Penunjukan Reviewer` | Peneliti | Tiga kartu terpisah: **Formulir Pengajuan Etik** (Poin B & C + tanda tangan), **Formulir Informed Consent** (Lembar Informasi + tanda tangan; dilewati bila penelitian tidak merekrut partisipan langsung, alasannya wajib), dan **kerahasiaan_data** (unggahan PDF). Kedua formulir bisa "Simpan sementara" sebagai draf; tombol Kirim memvalidasi semuanya |
 | Unggah PKS *(status tetap)* | CRU | `pks` — kapan saja, termasuk setelah proposal `Selesai`. Tidak menahan tahap mana pun |
 | Kembalikan berkas → `Perlu Revisi Berkas Etik` | KEPK | catatan **wajib** (sebutkan berkas mana yang salah); opsional `surat_tanggapan` |
 | Perbaiki berkas → `Menunggu Penunjukan Reviewer` | Peneliti | unggah ulang **≥1** berkas etik **atau `proposal`** — tim KEPK menelaah proposalnya juga, jadi koreksi bisa menyangkut proposal. Formulir Pengajuan Etik ikut bisa disunting di kartu yang sama |

@@ -160,12 +160,12 @@ class VerifikasiBerkasEtikTest extends TestCase
 
         Livewire::actingAs($this->peneliti)
             ->test(Show::class, ['proposal' => $p])
-            ->set('fileEtik.'.DocumentType::InformedConsent->value, UploadedFile::fake()->create('informed-consent.pdf', 100, 'application/pdf'))
+            ->set('fileEtik.'.DocumentType::KerahasiaanData->value, UploadedFile::fake()->create('kerahasiaan.pdf', 100, 'application/pdf'))
             ->call('kirimPerbaikanBerkasEtik')
             ->assertHasNoErrors();
 
         $this->assertSame(S::MenungguPenunjukanReviewer, $p->fresh()->status);
-        $this->assertSame(1, $p->documents()->where('jenis', DocumentType::InformedConsent->value)->count());
+        $this->assertSame(1, $p->documents()->where('jenis', DocumentType::KerahasiaanData->value)->count());
     }
 
     /**
@@ -195,13 +195,13 @@ class VerifikasiBerkasEtikTest extends TestCase
         Livewire::actingAs($this->peneliti)
             ->test(Show::class, ['proposal' => $p])
             ->set('fileProposal', UploadedFile::fake()->create('proposal-revisi.pdf', 100, 'application/pdf'))
-            ->set('fileEtik.'.DocumentType::InformedConsent->value, UploadedFile::fake()->create('informed-consent.pdf', 100, 'application/pdf'))
+            ->set('fileEtik.'.DocumentType::KerahasiaanData->value, UploadedFile::fake()->create('kerahasiaan.pdf', 100, 'application/pdf'))
             ->call('kirimPerbaikanBerkasEtik')
             ->assertHasNoErrors();
 
         $this->assertSame(S::MenungguPenunjukanReviewer, $p->fresh()->status);
         $this->assertSame(1, $p->documents()->where('jenis', DocumentType::Proposal->value)->count());
-        $this->assertSame(1, $p->documents()->where('jenis', DocumentType::InformedConsent->value)->count());
+        $this->assertSame(1, $p->documents()->where('jenis', DocumentType::KerahasiaanData->value)->count());
     }
 
     public function test_peneliti_harus_unggah_minimal_satu_berkas(): void
@@ -228,7 +228,7 @@ class VerifikasiBerkasEtikTest extends TestCase
 
         Livewire::actingAs($this->peneliti)
             ->test(Show::class, ['proposal' => $p])
-            ->set('fileEtik.'.DocumentType::InformedConsent->value, UploadedFile::fake()->create('informed-consent.pdf', 100, 'application/pdf'))
+            ->set('fileEtik.'.DocumentType::KerahasiaanData->value, UploadedFile::fake()->create('kerahasiaan.pdf', 100, 'application/pdf'))
             ->call('kirimPerbaikanBerkasEtik');
 
         $this->assertSame(0, $p->penugasanReviewer()->count());

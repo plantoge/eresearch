@@ -79,10 +79,7 @@ class PksCruTest extends TestCase
         $wajib = DocumentType::wajibTahap2();
 
         $this->assertNotContains(DocumentType::Pks, $wajib);
-        $this->assertSame(
-            [DocumentType::InformedConsent, DocumentType::KerahasiaanData],
-            $wajib,
-        );
+        $this->assertSame([DocumentType::KerahasiaanData], $wajib);
     }
 
     public function test_pks_ditandai_dokumen_milik_admin(): void
@@ -118,7 +115,10 @@ class PksCruTest extends TestCase
             ->set('formEtik.kerjasama', BentukKerjasama::Bukan->value)
             ->set('formEtik.peneliti_asing', '0')
             ->set('formEtik.pernah_diajukan', '0')
-            ->set('formEtik.sampel_ke_luar_negeri', '0');
+            ->set('formEtik.sampel_ke_luar_negeri', '0')
+            ->set('formEtik.tanda_tangan', 'data:image/png;base64,'.base64_encode('goresan-uji'))
+            ->set('informedConsent.merekrut_partisipan', '0')
+            ->set('informedConsent.alasan_tanpa_consent', 'Data sekunder, tanpa kontak subjek');
 
         $komponen->call('kirimBerkasEtik')->assertHasNoErrors();
 

@@ -134,19 +134,68 @@ class FormEtikTest extends TestCase
     protected function kartuEtik(?Proposal $p = null): Testable
     {
         $c = Livewire::test(Show::class, ['proposal' => $p ?? $this->proposalTahapEtik()])
-            ->set('kelengkapan', ['a' => true, 'b' => true, 'c' => true, 'f' => true])
+            ->set('formEtik.kelengkapan', ['a' => true, 'b' => true, 'c' => true, 'f' => true])
             ->set('formEtik.multisenter', '0')
             ->set('formEtik.kerjasama', BentukKerjasama::Bukan->value)
             ->set('formEtik.peneliti_asing', '0')
             ->set('formEtik.pernah_diajukan', '0')
             ->set('formEtik.sampel_ke_luar_negeri', '0')
-            ->set('formEtik.registrasi_bpom', 'Tidak, bukan produk yang diregistrasi');
+            ->set('formEtik.registrasi_bpom', 'Tidak, bukan produk yang diregistrasi')
+            ->set('formEtik.tanda_tangan', $this->tandaTangan())
+            // Informed consent ikut divalidasi saat kirim, tapi bukan yang diuji
+            // di berkas ini — jawaban tersingkat yang sah sudah cukup.
+            // Lihat InformedConsentTest untuk pengujiannya sendiri.
+            ->set('informedConsent.merekrut_partisipan', '0')
+            ->set('informedConsent.alasan_tanpa_consent', 'Data sekunder, tanpa kontak subjek');
 
         foreach (DocumentType::wajibTahap2() as $jenis) {
             $c->set("fileEtik.{$jenis->value}", UploadedFile::fake()->create("{$jenis->value}.pdf", 50, 'application/pdf'));
         }
 
         return $c;
+    }
+
+    /** Data URL PNG seperti yang dikirim kanvas x-mary-signature. */
+    protected function tandaTangan(): string
+    {
+        return 'data:image/png;base64,'.base64_encode('goresan-uji');
+    }
+
+    public function test_kirim_berkas_etik_tanpa_tanda_tangan_ditolak(): void
+    {
+        $this->kartuEtik()
+            ->set('formEtik.tanda_tangan', '')
+            ->call('kirimBerkasEtik')
+            ->assertHasErrors(['formEtik.tanda_tangan' => 'required']);
+
+        $this->assertDatabaseCount('rspi.kepk_form_etik', 0);
+    }
+
+    /**
+     * Kanvas tanda tangan mengirim string dari klien, jadi `required` saja tidak
+     * cukup: tanpa pemeriksaan bentuk, sampah tersimpan lalu muncul sebagai
+     * gambar rusak di PDF resmi.
+     */
+    public function test_tanda_tangan_yang_bukan_gambar_png_ditolak(): void
+    {
+        $this->kartuEtik()
+            ->set('formEtik.tanda_tangan', 'bukan-gambar')
+            ->call('kirimBerkasEtik')
+            ->assertHasErrors(['formEtik.tanda_tangan' => 'regex']);
+
+        $this->assertDatabaseCount('rspi.kepk_form_etik', 0);
+    }
+
+    public function test_tanda_tangan_tersimpan_dan_terisi_ulang(): void
+    {
+        $p = $this->proposalTahapEtik();
+
+        $this->kartuEtik($p)->call('kirimBerkasEtik')->assertHasNoErrors();
+
+        $this->assertSame($this->tandaTangan(), FormEtik::sole()->tanda_tangan);
+
+        Livewire::test(Show::class, ['proposal' => $p->fresh()])
+            ->assertSet('formEtik.tanda_tangan', $this->tandaTangan());
     }
 
     /**
@@ -156,10 +205,7 @@ class FormEtikTest extends TestCase
      */
     public function test_form_kaji_etik_bukan_lagi_berkas_wajib(): void
     {
-        $this->assertSame(
-            [DocumentType::InformedConsent, DocumentType::KerahasiaanData],
-            DocumentType::wajibTahap2(),
-        );
+        $this->assertNotContains(DocumentType::FormKajiEtik, DocumentType::wajibTahap2());
     }
 
     public function test_kirim_berkas_etik_tanpa_menjawab_informasi_lain_ditolak(): void
@@ -271,7 +317,7 @@ class FormEtikTest extends TestCase
         Livewire::test(Show::class, ['proposal' => $p])
             ->set('formEtik.multisenter', '1')
             ->set('formEtik.senter_utama', 'RSPI Prof. Dr. Sulianti Saroso')
-            ->set('fileEtik.'.DocumentType::InformedConsent->value,
+            ->set('fileEtik.'.DocumentType::KerahasiaanData->value,
                 UploadedFile::fake()->create('ic-revisi.pdf', 50, 'application/pdf'))
             ->call('kirimPerbaikanBerkasEtik')
             ->assertHasNoErrors();
@@ -291,8 +337,8 @@ class FormEtikTest extends TestCase
         Livewire::test(Show::class, ['proposal' => $p])
             ->assertSet('formEtik.kerjasama', BentukKerjasama::Bukan->value)
             ->assertSet('formEtik.sampel_ke_luar_negeri', '0')
-            ->assertSet('kelengkapan.a', true)
-            ->assertSet('kelengkapan.e', false);
+            ->assertSet('formEtik.kelengkapan.a', true)
+            ->assertSet('formEtik.kelengkapan.e', false);
     }
 
     /**
@@ -313,7 +359,7 @@ class FormEtikTest extends TestCase
 
         Livewire::test(Show::class, ['proposal' => $p->fresh()])
             ->set('formEtik.multisenter', '0')
-            ->set('fileEtik.'.DocumentType::InformedConsent->value,
+            ->set('fileEtik.'.DocumentType::KerahasiaanData->value,
                 UploadedFile::fake()->create('ic-revisi.pdf', 50, 'application/pdf'))
             ->call('kirimPerbaikanBerkasEtik')
             ->assertHasNoErrors();
@@ -382,6 +428,12 @@ class FormEtikTest extends TestCase
             ->assertSee('Formulir Pengajuan Etik')
             ->assertSee(KelengkapanDokumen::A->label())      // isi Poin B
             ->assertSee('Bukan kerja sama');                 // isi Poin C
+    }
+
+    public function test_tanda_tangan_ikut_terbaca_di_kartu_dokumen(): void
+    {
+        Livewire::test(Show::class, ['proposal' => $this->proposalBerformulir()])
+            ->assertSee($this->tandaTangan());
     }
 
     /** Proposal yang formulirnya belum diisi tidak menampilkan baris kosong. */

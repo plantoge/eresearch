@@ -49,7 +49,7 @@
             @foreach (KelengkapanDokumen::cases() as $butir)
                 <label class="flex gap-3 items-start cursor-pointer">
                     <input type="checkbox" class="checkbox checkbox-sm mt-0.5"
-                        wire:model="kelengkapan.{{ $butir->value }}">
+                        wire:model="formEtik.kelengkapan.{{ $butir->value }}">
                     <span class="text-sm leading-snug">
                         <span class="font-medium">{{ $butir->value }}.</span> {{ $butir->label() }}
                         @if ($butir->keterangan())
@@ -70,7 +70,7 @@
         @error('formEtik.multisenter')
             <div class="text-error text-sm">{{ $message }}</div>
         @enderror
-        @if (($formEtik['multisenter'] ?? '') === '1')
+        @if ($formEtik->multisenter === '1')
             <div class="pl-4 space-y-3 border-l-2 border-base-300">
                 <x-mary-input label="Senter penelitian utama" wire:model="formEtik.senter_utama" />
                 <x-mary-input label="Senter penelitian satelit (opsional)" wire:model="formEtik.senter_satelit" />
@@ -82,7 +82,7 @@
         @error('formEtik.kerjasama')
             <div class="text-error text-sm">{{ $message }}</div>
         @enderror
-        @if (($formEtik['kerjasama'] ?? '') === BentukKerjasama::Internasional->value)
+        @if ($formEtik->kerjasama === BentukKerjasama::Internasional->value)
             <div class="pl-4 border-l-2 border-base-300">
                 <x-mary-input label="Jumlah negara" wire:model="formEtik.jumlah_negara"
                     hint="Sebutkan jumlah negara yang terlibat" />
@@ -99,7 +99,7 @@
         @error('formEtik.pernah_diajukan')
             <div class="text-error text-sm">{{ $message }}</div>
         @enderror
-        @if (($formEtik['pernah_diajukan'] ?? '') === '1')
+        @if ($formEtik->pernah_diajukan === '1')
             <div class="pl-4 border-l-2 border-base-300">
                 <x-mary-radio label="Hasilnya" :options="[['id' => '1', 'name' => 'Disetujui'], ['id' => '0', 'name' => 'Tidak Disetujui']]" inline
                     wire:model="formEtik.disetujui_komisi_lain" hint="Lampirkan copy dokumen persetujuannya." />
@@ -114,7 +114,7 @@
         @error('formEtik.sampel_ke_luar_negeri')
             <div class="text-error text-sm">{{ $message }}</div>
         @enderror
-        @if (($formEtik['sampel_ke_luar_negeri'] ?? '') === '1')
+        @if ($formEtik->sampel_ke_luar_negeri === '1')
             <div class="pl-4 border-l-2 border-base-300">
                 <x-mary-input label="Negara tujuan" wire:model="formEtik.negara_tujuan"
                     hint="Lampirkan draft Material Transfer Agreement (MTA)." />
@@ -124,4 +124,9 @@
         <x-mary-textarea label="5. Apakah produk yang diteliti akan diregistrasi ke BPOM/Kemenkes?"
             wire:model="formEtik.registrasi_bpom" rows="2" hint="Tulis '—' bila tidak berlaku." />
     </div>
+
+    @include('livewire.proposal.partials.tanda-tangan-peneliti', [
+        'model' => 'formEtik.tanda_tangan',
+        'nilai' => $formEtik->tanda_tangan,
+    ])
 </div>

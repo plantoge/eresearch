@@ -132,7 +132,13 @@
     <div class="ttd">
         Jakarta, {{ $form->dikirim_pada?->translatedFormat('d F Y') ?: '—' }}<br>
         Peneliti utama,
-        <div class="ruang"></div>
+        @if ($form->tanda_tangan)
+            {{-- dompdf membaca data URI langsung, jadi tanda tangannya tidak perlu
+                 ditulis dulu jadi berkas sementara. --}}
+            <div><img src="{{ $form->tanda_tangan }}" alt="Tanda tangan" height="56"></div>
+        @else
+            <div class="ruang"></div>
+        @endif
         {{ $proposal->peneliti_utama }}
     </div>
 </body>

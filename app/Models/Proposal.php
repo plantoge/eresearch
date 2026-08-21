@@ -102,6 +102,12 @@ class Proposal extends Model
         return $this->hasOne(FormEtik::class, 'proposal_id');
     }
 
+    /** Lembar Informasi Informed Consent — diisi peneliti, dibaca KEPK. */
+    public function informedConsent()
+    {
+        return $this->hasOne(InformedConsent::class, 'proposal_id');
+    }
+
     public function telaahReviewer()
     {
         return $this->hasMany(TelaahReviewer::class, 'proposal_id')->orderBy('ronde');

@@ -30,7 +30,7 @@ class FormEtik extends Model
         'kerjasama', 'jumlah_negara', 'peneliti_asing',
         'pernah_diajukan', 'disetujui_komisi_lain',
         'sampel_ke_luar_negeri', 'negara_tujuan',
-        'registrasi_bpom', 'dikirim_pada',
+        'registrasi_bpom', 'tanda_tangan', 'dikirim_pada',
     ];
 
     protected $casts = [

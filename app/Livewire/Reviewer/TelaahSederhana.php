@@ -301,7 +301,7 @@ class TelaahSederhana extends Component
                     // sejak formulir etik jadi isian terstruktur, tapi proposal
                     // lama masih menyimpannya sebagai PDF — dan reviewer tetap
                     // harus bisa membacanya.
-                    [...DocumentType::wajibTahap1(), ...DocumentType::wajibTahap2(), DocumentType::FormKajiEtik]
+                    [...DocumentType::wajibTahap1(), ...DocumentType::wajibTahap2(), DocumentType::FormKajiEtik, DocumentType::InformedConsent]
                 ))
                 ->orderBy('jenis')->orderByDesc('versi')->get()
                 ->groupBy('jenis')->map->first()

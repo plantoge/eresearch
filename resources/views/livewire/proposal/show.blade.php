@@ -69,7 +69,7 @@
                         <div>
                             <div class="font-medium text-sm">Formulir Pengajuan Etik</div>
                             <div class="text-xs opacity-60">
-                                Diisi {{ $formulirEtik->dikirim_pada?->format('d/m/Y H:i') ?: '—' }}
+                                {{ $formulirEtik->dikirim_pada ? 'Diisi '.$formulirEtik->dikirim_pada->format('d/m/Y H:i') : 'Draf — belum dikirim' }}
                             </div>
                         </div>
                         <div class="flex gap-1">
@@ -77,6 +77,23 @@
                                 @click="$wire.modalFormEtik = true" />
                             <x-mary-button icon="o-printer" class="btn-ghost btn-sm" tooltip="Cetak PDF"
                                 link="{{ route('formulir-etik.pdf', $proposal) }}" external />
+                        </div>
+                    </div>
+                @endif
+
+                @if ($formulirConsent)
+                    <div class="flex items-center justify-between py-2 border-t border-base-200">
+                        <div>
+                            <div class="font-medium text-sm">Formulir Informed Consent</div>
+                            <div class="text-xs opacity-60">
+                                {{ $formulirConsent->sudahDikirim() ? 'Diisi '.$formulirConsent->dikirim_pada->format('d/m/Y H:i') : 'Draf — belum dikirim' }}
+                            </div>
+                        </div>
+                        <div class="flex gap-1">
+                            <x-mary-button icon="o-eye" class="btn-ghost btn-sm" tooltip="Lihat isian"
+                                @click="$wire.modalInformedConsent = true" />
+                            <x-mary-button icon="o-printer" class="btn-ghost btn-sm" tooltip="Cetak PDF"
+                                link="{{ route('informed-consent.pdf', $proposal) }}" external />
                         </div>
                     </div>
                 @endif
@@ -90,6 +107,18 @@
                         <x-mary-button label="Cetak PDF" icon="o-printer"
                             link="{{ route('formulir-etik.pdf', $proposal) }}" external />
                         <x-mary-button label="Tutup" @click="$wire.modalFormEtik = false" />
+                    </x-slot:actions>
+                </x-mary-modal>
+            @endif
+
+            @if ($formulirConsent)
+                <x-mary-modal wire:model="modalInformedConsent" title="Formulir Informed Consent"
+                    subtitle="{{ $proposal->kode }}" box-class="max-w-3xl">
+                    @include('livewire.proposal.partials.informed-consent-baca', ['formulir' => $formulirConsent])
+                    <x-slot:actions>
+                        <x-mary-button label="Cetak PDF" icon="o-printer"
+                            link="{{ route('informed-consent.pdf', $proposal) }}" external />
+                        <x-mary-button label="Tutup" @click="$wire.modalInformedConsent = false" />
                     </x-slot:actions>
                 </x-mary-modal>
             @endif
@@ -150,22 +179,42 @@
                         </x-mary-form>
                     </x-mary-card>
                 @elseif ($proposal->status === ProposalStatus::MenungguKelengkapanBerkasEtik)
-                    <x-mary-card title="Formulir Pengajuan Etik"
-                        subtitle="Tahap 2 — isi formulir lalu lampirkan berkasnya" shadow>
+                    {{-- Tiga kartu terpisah, bukan satu kartu panjang: ketiganya
+                         dokumen berbeda dengan pembaca berbeda, dan masing-masing
+                         bisa disimpan sementara supaya sesi yang putus tidak
+                         membuang isian yang sudah panjang. --}}
+                    <x-mary-card title="Formulir Pengajuan Etik" subtitle="Tahap 2 — Poin A, B, dan C" shadow>
+                        @include('livewire.proposal.partials.formulir-etik-isian')
+                        <x-slot:actions>
+                            <x-mary-button label="Simpan sementara" wire:click="simpanDrafFormEtik"
+                                class="btn-ghost" spinner="simpanDrafFormEtik" />
+                        </x-slot:actions>
+                    </x-mary-card>
+
+                    <x-mary-card title="Formulir Informed Consent"
+                        subtitle="Lembar Informasi untuk calon subjek penelitian" shadow>
+                        @include('livewire.proposal.partials.informed-consent-isian')
+                        <x-slot:actions>
+                            <x-mary-button label="Simpan sementara" wire:click="simpanDrafInformedConsent"
+                                class="btn-ghost" spinner="simpanDrafInformedConsent" />
+                        </x-slot:actions>
+                    </x-mary-card>
+
+                    <x-mary-card title="Berkas Lampiran" subtitle="Wajib diunggah sebelum dikirim ke KEPK" shadow>
                         <x-mary-form wire:submit="kirimBerkasEtik">
-                            @include('livewire.proposal.partials.formulir-etik-isian')
-
-                            <div class="pt-2">
-                                <div class="font-semibold text-sm mb-2">Berkas yang dilampirkan</div>
-                                @foreach (DocumentType::wajibTahap2() as $jenis)
-                                    <x-mary-file :label="$jenis->label()" :hint="$jenis->hintUnggah()"
-                                        wire:model="fileEtik.{{ $jenis->value }}" accept="application/pdf" required />
-                                @endforeach
-                            </div>
-
-                            <x-slot:actions><x-mary-button label="Kirim ke KEPK" type="submit" class="btn-primary"
-                                    spinner="kirimBerkasEtik" /></x-slot:actions>
+                            @foreach (DocumentType::wajibTahap2() as $jenis)
+                                <x-mary-file :label="$jenis->label()" :hint="$jenis->hintUnggah()"
+                                    wire:model="fileEtik.{{ $jenis->value }}" accept="application/pdf" required />
+                            @endforeach
+                            <x-slot:actions>
+                                <x-mary-button label="Kirim ke KEPK" type="submit" icon="o-paper-airplane"
+                                    class="btn-primary" spinner="kirimBerkasEtik" />
+                            </x-slot:actions>
                         </x-mary-form>
+                        <x-mary-alert icon="o-information-circle" class="alert-info mt-3 text-sm">
+                            Tombol kirim memeriksa kedua formulir di atas. Bila ada yang belum lengkap,
+                            pesannya muncul di kartu formulir yang bersangkutan.
+                        </x-mary-alert>
                     </x-mary-card>
                 @elseif ($proposal->status === ProposalStatus::PerluRevisiBerkasEtik)
                     <x-mary-card title="Perbaiki Berkas Kaji Etik"
@@ -184,6 +233,10 @@
                                  jawaban Poin C, bukan berkasnya. --}}
                             @if ($formulirEtik)
                                 @include('livewire.proposal.partials.formulir-etik-isian')
+                            @endif
+                            @if ($formulirConsent)
+                                <div class="divider">Formulir Informed Consent</div>
+                                @include('livewire.proposal.partials.informed-consent-isian')
                             @endif
 
                             {{-- Proposal ikut ditelaah tim KEPK, jadi koreksi mereka bisa
@@ -208,6 +261,10 @@
                         <x-mary-form wire:submit="kirimRevisiEtik">
                             @if ($formulirEtik)
                                 @include('livewire.proposal.partials.formulir-etik-isian')
+                            @endif
+                            @if ($formulirConsent)
+                                <div class="divider">Formulir Informed Consent</div>
+                                @include('livewire.proposal.partials.informed-consent-isian')
                             @endif
                             @foreach (DocumentType::wajibTahap2() as $jenis)
                                 <x-mary-file :label="$jenis->label()" :hint="$jenis->hintUnggah()"

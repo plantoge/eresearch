@@ -90,6 +90,7 @@ erDiagram
     proposal ||--o| cru_izin_penelitian : "izin"
     proposal ||--o| kepk_protokol_etik : "berkas kerja KEPK"
     proposal ||--o| kepk_form_etik : "formulir etik peneliti"
+    proposal ||--o| kepk_informed_consent : "lembar informasi peneliti"
     proposal ||--o{ kepk_telaah_reviewer : "telaah per ronde"
     proposal ||--o{ kepk_penugasan_reviewer : "penugasan reviewer"
     proposal ||--o| respon : "1 survey aktif"
@@ -149,6 +150,14 @@ erDiagram
         string kerjasama
         boolean pernah_diajukan
         boolean sampel_ke_luar_negeri
+        timestamp dikirim_pada
+    }
+    kepk_informed_consent {
+        uuid proposal_id UK
+        boolean merekrut_partisipan
+        text alasan_tanpa_consent
+        json lembar_informasi
+        text tanda_tangan
         timestamp dikirim_pada
     }
     kepk_penugasan_reviewer {
@@ -309,11 +318,37 @@ di `proposal`.
 | `pernah_diajukan` | bool. Bila true → `disetujui_komisi_lain` wajib |
 | `sampel_ke_luar_negeri` | bool. Bila true → `negara_tujuan` wajib |
 | `registrasi_bpom` | text null — jawaban bebas Poin C.5 |
-| `dikirim_pada` | timestamp saat formulir dikirim/dikoreksi |
+| `tanda_tangan` | data URL PNG dari kanvas `x-mary-signature` — lihat `App\Support\TandaTangan` |
+| `dikirim_pada` | timestamp saat formulir dikirim; **null = masih draf** |
 
 Jawaban lanjutan yang syaratnya gugur **dikosongkan saat disimpan**, supaya tidak ada dua
 jawaban yang saling bertentangan. Dibaca lewat modal di kartu Dokumen dan dicetak PDF di
 `GET /proposal/{proposal}/formulir-etik.pdf` (otorisasi `Proposal::bolehDilihatOleh()`).
+
+### `rspi.kepk_informed_consent` — 1:1
+
+Lembar Informasi Informed Consent yang **diisi peneliti**, menggantikan unggahan PDF
+`informed_consent`.
+
+Lembar Persetujuan (halaman terakhir formulir kertas) **tidak punya kolom sama sekali**: ia
+ditandatangani subjek penelitian di lapangan — orang yang tidak punya akun di aplikasi ini —
+jadi aplikasi hanya mencetaknya kosong sebagai templat. Yang ditelaah KEPK memang templatnya,
+bukan persetujuan yang sudah terkumpul.
+
+| Kolom | Keterangan |
+|---|---|
+| `proposal_id` | partial unique |
+| `merekrut_partisipan` | bool. **false** (mis. rekam medis retrospektif) → seluruh Lembar Informasi dilewati dan `alasan_tanpa_consent` wajib |
+| `alasan_tanpa_consent` | text null — alasannya tetap dicatat supaya KEPK menilai, bukan menebak |
+| `peran_peneliti` / `maksud_penelitian` | mengisi kalimat pembuka; instansi tidak disalin — sudah ada di `proposal` |
+| `lembar_informasi` | json `{bagian: teks}` — 14 bagian naratif, enum `BagianLembarInformasi` |
+| `tanda_tangan` | data URL PNG; wajib hanya bila merekrut partisipan |
+| `dikirim_pada` | timestamp saat dikirim; **null = masih draf** |
+
+Jawaban yang syaratnya gugur dikosongkan saat disimpan. Dibaca lewat modal di kartu Dokumen
+dan dicetak di `GET /proposal/{proposal}/informed-consent.pdf` (otorisasi
+`Proposal::bolehDilihatOleh()`); PDF-nya memuat Lembar Informasi + **Lembar Persetujuan kosong**
+dengan judul penelitian terisi.
 
 ### `rspi.kepk_penugasan_reviewer`
 Penugasan reviewer oleh KEPK — bisa lebih dari satu per proposal.
@@ -394,7 +429,7 @@ Helper lain di enum ini: `tahapan()` (1–4, `null` untuk terminal) · `unit()` 
 | Kelompok | Nilai |
 |---|---|
 | Tahap 1 | `surat_pengantar`, `proposal` *(wajib)*; `kaji_etik`, `sertifikat_gcp` *(opsional)* |
-| Tahap 2 | `informed_consent`, `kerahasiaan_data` *(keduanya wajib)*; `form_kaji_etik` **tidak lagi diunggah** — digantikan isian terstruktur `rspi.kepk_form_etik`, nilainya dipertahankan agar unggahan lama tetap tampil |
+| Tahap 2 | `kerahasiaan_data` *(satu-satunya unggahan wajib)*; `form_kaji_etik` dan `informed_consent` **tidak lagi diunggah** — digantikan isian terstruktur `rspi.kepk_form_etik` dan `rspi.kepk_informed_consent`. Kedua nilai enum dipertahankan agar unggahan lama tetap tampil dan terbaca reviewer |
 | Tahap 3 | `bukti_bayar_cru`, `bukti_bayar_kepk` *(keduanya wajib)* |
 | Tahap 4 | `laporan_penelitian`, `raw_data` |
 | Output admin | `izin_draft`, `izin_final`, `surat_penolakan`, `surat_tanggapan` |
