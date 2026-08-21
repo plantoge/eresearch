@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->timestamps();
+            $table->softDeletes();
+            $table->auditColumns();
             $table->string('name');
             $table->string('username')->nullable()->unique();
             $table->string('email')->unique();
@@ -23,9 +26,6 @@ return new class extends Migration
             $table->string('institusi_asal')->nullable();
             $table->string('kategori_pendidikan')->nullable();
             $table->rememberToken();
-            $table->timestamps();
-            $table->softDeletes();
-            $table->auditColumns();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

@@ -11,49 +11,49 @@ return new class extends Migration
     {
         Schema::create('rspi.master_aspek', function (Blueprint $t) {
             $t->uuid('id')->primary();
+            $t->timestamps();
+            $t->softDeletes();
+            $t->auditColumns();
             $t->string('nama_aspek');
             $t->string('deskripsi')->nullable();
             $t->unsignedInteger('urutan')->default(0);
             $t->boolean('status_aktif')->default(true);
-            $t->timestamps();
-            $t->softDeletes();
-            $t->auditColumns();
         });
 
         Schema::create('rspi.master_pertanyaan', function (Blueprint $t) {
             $t->uuid('id')->primary();
+            $t->timestamps();
+            $t->softDeletes();
+            $t->auditColumns();
             $t->uuid('master_aspek_id');
             $t->text('pertanyaan');
             $t->boolean('is_required')->default(true);
             $t->unsignedInteger('urutan')->default(0);
             $t->boolean('status_aktif')->default(true);
-            $t->timestamps();
-            $t->softDeletes();
-            $t->auditColumns();
 
             $t->index('master_aspek_id');
         });
 
         Schema::create('rspi.master_skala', function (Blueprint $t) {
             $t->uuid('id')->primary();
-            $t->string('nama_skala');
-            $t->integer('nilai');
-            $t->unsignedInteger('urutan')->default(0);
             $t->timestamps();
             $t->softDeletes();
             $t->auditColumns();
+            $t->string('nama_skala');
+            $t->integer('nilai');
+            $t->unsignedInteger('urutan')->default(0);
         });
 
         Schema::create('rspi.respon', function (Blueprint $t) {
             $t->uuid('id')->primary();
+            $t->timestamps();
+            $t->softDeletes();
+            $t->auditColumns();
             $t->uuid('proposal_id');                 // D5: gate survey per proposal
             $t->uuid('responden_id');
             $t->string('responden')->nullable();     // snapshot nama
             $t->string('jenis_responden')->nullable();
             $t->text('saran')->nullable();
-            $t->timestamps();
-            $t->softDeletes();
-            $t->auditColumns();
 
             $t->index('responden_id');
         });
@@ -63,14 +63,14 @@ return new class extends Migration
 
         Schema::create('rspi.jawaban', function (Blueprint $t) {
             $t->uuid('id')->primary();
+            $t->timestamps();
+            $t->softDeletes();
+            $t->auditColumns();
             $t->uuid('respon_id');
             $t->uuid('master_pertanyaan_id');
             $t->uuid('master_skala_id');
             $t->text('pertanyaan')->nullable();      // snapshot teks
             $t->text('jawaban')->nullable();         // snapshot nilai
-            $t->timestamps();
-            $t->softDeletes();
-            $t->auditColumns();
 
             $t->index('respon_id');
         });

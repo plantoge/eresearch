@@ -26,11 +26,19 @@ Berlaku untuk **semua** tabel domain (bukan tabel bawaan Laravel/spatie).
 
 ```php
 $t->uuid('id')->primary();
-// ... kolom domain ...
-$t->timestamps();
-$t->softDeletes();
+$t->timestamps();     // created_at, updated_at
+$t->softDeletes();    // deleted_at
 $t->auditColumns();   // created_by, updated_by, deleted_by
+// ... barulah kolom domain ...
 ```
+
+**Urutannya mengikat:** blok audit ditulis **tepat setelah PK**, sebelum kolom isi. Dengan
+begitu `artisan db:table` dan `\d` di psql selalu membuka dengan enam kolom yang sama di
+setiap tabel, dan kolom yang benar-benar berisi data terbaca sebagai satu kelompok
+sesudahnya — bukan terpotong oleh kolom audit di ujung.
+
+Daftar kolom per tabel di §3–§5 **tidak mengulang keenam kolom audit itu**; anggap semuanya
+ada tepat di bawah `id`.
 
 **Model** — trait `App\Concerns\HasUuidAndAudit` mengisi `id` dan kolom audit lewat event
 `creating` / `updating` / `deleting`, plus relasi `createdBy()`, `updatedBy()`, `deletedBy()`.

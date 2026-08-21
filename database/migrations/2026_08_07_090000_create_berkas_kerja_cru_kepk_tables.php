@@ -20,6 +20,9 @@ return new class extends Migration
 
         Schema::create('rspi.cru_berkas_penelitian', function (Blueprint $t) {
             $t->uuid('id')->primary();
+            $t->timestamps();
+            $t->softDeletes();
+            $t->auditColumns();
             $t->uuid('proposal_id');
             $t->timestamp('tanggal_presentasi')->nullable();
             $t->string('kategori_presentasi')->nullable();
@@ -27,9 +30,6 @@ return new class extends Migration
             $t->text('catatan_verifikasi')->nullable();
             $t->uuid('diverifikasi_oleh')->nullable();
             $t->timestamp('diverifikasi_pada')->nullable();
-            $t->timestamps();
-            $t->softDeletes();
-            $t->auditColumns();
         });
 
         DB::statement('create unique index cru_berkas_penelitian_unique on rspi.cru_berkas_penelitian (proposal_id) where deleted_at is null');
@@ -38,6 +38,9 @@ return new class extends Migration
         // sebagai dua nilai enum DocumentType — tanpa nominal, verifikator, atau alasan tolak.
         Schema::create('rspi.cru_pembayaran', function (Blueprint $t) {
             $t->uuid('id')->primary();
+            $t->timestamps();
+            $t->softDeletes();
+            $t->auditColumns();
             $t->uuid('proposal_id');
             $t->string('tujuan');                        // enum TujuanPembayaran: cru|kepk
             $t->unsignedBigInteger('nominal')->nullable(); // rupiah sebagai integer, bukan desimal
@@ -46,9 +49,6 @@ return new class extends Migration
             $t->uuid('diverifikasi_oleh')->nullable();
             $t->timestamp('diverifikasi_pada')->nullable();
             $t->text('catatan')->nullable();             // alasan bila ditolak
-            $t->timestamps();
-            $t->softDeletes();
-            $t->auditColumns();
 
             $t->index(['proposal_id', 'status']);
         });
@@ -57,15 +57,15 @@ return new class extends Migration
 
         Schema::create('rspi.cru_izin_penelitian', function (Blueprint $t) {
             $t->uuid('id')->primary();
+            $t->timestamps();
+            $t->softDeletes();
+            $t->auditColumns();
             $t->uuid('proposal_id');
             $t->string('nomor_izin')->nullable();
             $t->timestamp('tanggal_terbit_draft')->nullable();
             $t->timestamp('tanggal_terbit_final')->nullable();
             $t->date('berlaku_sampai')->nullable();
             $t->uuid('diterbitkan_oleh')->nullable();
-            $t->timestamps();
-            $t->softDeletes();
-            $t->auditColumns();
         });
 
         DB::statement('create unique index cru_izin_penelitian_unique on rspi.cru_izin_penelitian (proposal_id) where deleted_at is null');
@@ -74,6 +74,9 @@ return new class extends Migration
 
         Schema::create('rspi.kepk_protokol_etik', function (Blueprint $t) {
             $t->uuid('id')->primary();
+            $t->timestamps();
+            $t->softDeletes();
+            $t->auditColumns();
             $t->uuid('proposal_id');
             $t->string('nomor_protokol')->nullable();      // registrasi KEPK, terpisah dari RSPISS-YYYY-###
             $t->string('jenis_telaah')->nullable();        // enum JenisTelaah
@@ -82,9 +85,6 @@ return new class extends Migration
             $t->string('nomor_ec')->nullable();            // ethical clearance yang diterbitkan
             $t->timestamp('tanggal_terbit_ec')->nullable();
             $t->date('berlaku_sampai')->nullable();
-            $t->timestamps();
-            $t->softDeletes();
-            $t->auditColumns();
         });
 
         DB::statement('create unique index kepk_protokol_etik_unique on rspi.kepk_protokol_etik (proposal_id) where deleted_at is null');
@@ -94,15 +94,15 @@ return new class extends Migration
         // route yang menjangkaunya — kerahasiaan jadi sifat struktur, bukan sebuah if.
         Schema::create('rspi.kepk_dokumen_telaah', function (Blueprint $t) {
             $t->uuid('id')->primary();
+            $t->timestamps();
+            $t->softDeletes();
+            $t->auditColumns();
             $t->uuid('proposal_id');
             $t->uuid('telaah_id')->nullable();
             $t->string('path');
             $t->string('nama_asli')->nullable();
             $t->unsignedSmallInteger('versi')->default(1);
             $t->uuid('uploaded_by')->nullable();
-            $t->timestamps();
-            $t->softDeletes();
-            $t->auditColumns();
 
             $t->index('proposal_id');
         });

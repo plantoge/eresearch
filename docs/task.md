@@ -79,19 +79,20 @@ mengerjakan tanpa menebak:
 
 ## 3. Belum Dikerjakan
 
-### Migrate nomor proposal format baru di DB kerja & server
-**Kenapa:** format nomor proposal berganti dari `RSPISS-YYYY-###` menjadi 10 digit
-`TTYYMMNNNN` (mis. `0126080001`). Migration `2026_08_21_000000_tambah_tipe_dan_bulan_proposal`
-sudah ada tapi **belum dijalankan** di `cru` maupun `eprotocol` — hanya di `cru_test` lewat
-suite tes.
-**Kondisi selesai:** `artisan migrate` jalan di kedua database; proposal lama masih bernomor
-format lama (kolom `tipe_proposal` terisi `01`, `bulan` di-backfill dari `created_at`) dan
-proposal baru terbit dengan format baru. Kalau data lama memang dummy, `migrate:fresh --seed`
-lebih rapi karena seluruh nomor jadi seragam.
-**Catatan:** migration sengaja menambah kolom dengan default sementara lalu melepas
-default-nya, supaya `migrate` tidak gagal di database yang sudah berisi baris **dan** nilai
-tetap wajib datang dari pemanggil. Perakit formatnya satu tempat:
-`ProposalWorkflow::formatKode()`.
+### `migrate:fresh --seed` di DB kerja & server
+**Kenapa:** dua perubahan struktur menumpuk dan keduanya **hanya bisa masuk lewat
+`migrate:fresh`**, bukan `artisan migrate`: (1) nomor proposal berganti format menjadi 10
+digit `TTYYMMNNNN` dengan kolom `tipe_proposal` + `bulan`, dan (2) blok kolom audit dipindah
+ke posisi tepat setelah PK di seluruh migration. Keduanya diedit **di dalam migration yang
+sudah pernah jalan** — sah dilakukan di sini karena pemilik sistem memang meminta seluruh
+struktur dibangun ulang.
+**Kondisi selesai:** `cru` dan `eprotocol` dibangun ulang; `artisan db:table rspi.proposal`
+menampilkan `id` lalu enam kolom audit lalu `tipe_proposal`, `tahun`, `bulan`, `nomor`,
+`kode`; seluruh proposal bernomor format baru.
+**Catatan:** dijalankan **oleh pemilik sistem** (rules.md §5). Perakit format nomornya satu
+tempat: `ProposalWorkflow::formatKode()`. Migration `ALTER` sementara
+(`2026_08_21_000000_tambah_tipe_dan_bulan_proposal`) sudah dihapus — kolomnya kini lahir
+langsung di `create_proposal_table`.
 
 ### Form telaah reviewer & form-form KEPK
 **Kenapa:** formulir telaah protokol KEPK (45 item Ya/Tidak/NA + PSP) belum ada di aplikasi;

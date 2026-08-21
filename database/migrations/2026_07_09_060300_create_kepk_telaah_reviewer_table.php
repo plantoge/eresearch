@@ -17,15 +17,15 @@ return new class extends Migration
     {
         Schema::create('rspi.kepk_telaah_reviewer', function (Blueprint $t) {
             $t->uuid('id')->primary();
+            $t->timestamps();
+            $t->softDeletes();
+            $t->auditColumns();
             $t->uuid('proposal_id');
             $t->string('unit');                      // enum Unit — pembeda reviewer vs KEPK
             $t->uuid('reviewer_id')->nullable();
             $t->string('keputusan');                 // approve|revise|reject
             $t->text('komentar')->nullable();
             $t->unsignedSmallInteger('ronde')->default(1);
-            $t->timestamps();
-            $t->softDeletes();
-            $t->auditColumns();
 
             $t->index(['proposal_id', 'ronde']);
         });

@@ -10,6 +10,9 @@ return new class extends Migration
     {
         Schema::create('rspi.informasi_kontak', function (Blueprint $t) {
             $t->uuid('id')->primary();
+            $t->timestamps();
+            $t->softDeletes();
+            $t->auditColumns();
             // Kontak
             $t->string('telepon')->nullable();
             $t->string('fax')->nullable();
@@ -38,9 +41,6 @@ return new class extends Migration
             $t->string('nama_bank')->nullable();
             $t->string('logo_bank')->nullable();
             $t->text('deskripsi_biaya')->nullable();
-            $t->timestamps();
-            $t->softDeletes();
-            $t->auditColumns();
         });
     }
 

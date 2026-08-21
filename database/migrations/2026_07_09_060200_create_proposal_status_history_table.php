@@ -14,15 +14,15 @@ return new class extends Migration
     {
         Schema::create('rspi.proposal_status_history', function (Blueprint $t) {
             $t->uuid('id')->primary();
+            $t->timestamps();
+            $t->softDeletes();
+            $t->auditColumns();
             $t->uuid('proposal_id');
             $t->string('from_status')->nullable();
             $t->string('to_status');
             $t->string('unit')->nullable();          // enum Unit (D3)
             $t->uuid('actor_id')->nullable();
             $t->text('catatan')->nullable();
-            $t->timestamps();
-            $t->softDeletes();
-            $t->auditColumns();
 
             $t->index('proposal_id');
         });

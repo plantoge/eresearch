@@ -14,9 +14,14 @@ return new class extends Migration
     {
         Schema::create('rspi.proposal', function (Blueprint $t) {
             $t->uuid('id')->primary();
-            $t->unsignedSmallInteger('tahun');            // D6: nomor increment per tahun
+            $t->timestamps();
+            $t->softDeletes();
+            $t->auditColumns();
+            $t->string('tipe_proposal', 2);               // enum TipeProposal: 01 internal, 02 eksternal
+            $t->unsignedSmallInteger('tahun');            // D6: empat digit; deret nomor per tahun
+            $t->unsignedTinyInteger('bulan');             // 1..12, bulan terbitnya nomor
             $t->unsignedBigInteger('nomor');
-            $t->string('kode')->unique();                 // RSPISS-YYYY-###
+            $t->string('kode')->unique();                 // D6: TTYYMMNNNN, mis. 0126080001
             $t->string('peneliti_utama');
             $t->text('tim_peneliti')->nullable();
             $t->text('judul_penelitian');
@@ -26,9 +31,6 @@ return new class extends Migration
             $t->uuid('user_id');                          // relasi users (FK menyusul)
             $t->string('status');                         // cast enum ProposalStatus
             $t->string('unit_sekarang')->nullable();      // D2: turunan status, materialized
-            $t->timestamps();
-            $t->softDeletes();
-            $t->auditColumns();
 
             $t->unique(['tahun', 'nomor']);
             $t->index('unit_sekarang');

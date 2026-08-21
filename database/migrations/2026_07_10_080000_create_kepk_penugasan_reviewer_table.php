@@ -12,12 +12,12 @@ return new class extends Migration
     {
         Schema::create('rspi.kepk_penugasan_reviewer', function (Blueprint $t) {
             $t->uuid('id')->primary();
-            $t->uuid('proposal_id');
-            $t->uuid('reviewer_id');
-            $t->string('status')->default('menunggu'); // menunggu|acc|revisi
             $t->timestamps();
             $t->softDeletes();
             $t->auditColumns();
+            $t->uuid('proposal_id');
+            $t->uuid('reviewer_id');
+            $t->string('status')->default('menunggu'); // menunggu|acc|revisi
 
             $t->index(['reviewer_id', 'status']);
         });

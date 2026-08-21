@@ -10,6 +10,9 @@ return new class extends Migration
     {
         Schema::create('rspi.menus', function (Blueprint $t) {
             $t->uuid('id')->primary();
+            $t->timestamps();
+            $t->softDeletes();
+            $t->auditColumns();
             $t->string('nama');
             $t->string('slug')->unique();            // → permission {slug}.read|create|update|delete
             $t->string('route')->nullable();
@@ -17,9 +20,6 @@ return new class extends Migration
             $t->uuid('parent_id')->nullable();
             $t->unsignedInteger('urutan')->default(0);
             $t->boolean('aktif')->default(true);
-            $t->timestamps();
-            $t->softDeletes();
-            $t->auditColumns();
 
             $t->index(['parent_id', 'urutan']);
         });

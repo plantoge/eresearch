@@ -52,7 +52,9 @@
 
 ## 3. Konvensi Kode
 
-- **Tabel baru**: uuid v7 PK + `timestamps()` + `softDeletes()` + `auditColumns()`.
+- **Tabel baru**: uuid v7 PK + `timestamps()` + `softDeletes()` + `auditColumns()`, dan blok
+  audit itu ditulis **tepat setelah PK** — bukan di ujung definisi tabel, supaya urutan kolom
+  seragam di semua tabel (lihat [skema.md §1](skema.md#1-konvensi-wajib)).
   Model memakai trait `HasUuidAndAudit` + `SoftDeletes`, dengan `$incrementing = false` dan
   `$keyType = 'string'`.
 - **Foreign key masih ditunda** — kolom `*_id` tanpa constraint, tapi tetap di-index.
