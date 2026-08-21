@@ -235,6 +235,32 @@ class InformedConsentTest extends TestCase
             ->assertSet('informedConsent.peran_peneliti', 'perawat');
     }
 
+    /**
+     * Dua kanvas tanda tangan di satu halaman harus punya id berbeda.
+     *
+     * x-mary-signature menurunkan id kanvasnya dari `md5(serialize($this))` atas
+     * argumen KONSTRUKTOR saja — `wire:model` tidak ikut, karena bag atribut baru
+     * dipasang Blade setelah konstruksi. Dua pemanggilan dengan height/hint yang
+     * sama karena itu menghasilkan id yang sama persis, dan
+     * `document.getElementById()` pada komponen kedua menemukan kanvas PERTAMA:
+     * kanvas kedua tidak pernah dipasangi SignaturePad dan diam saat digambar.
+     */
+    public function test_kanvas_tanda_tangan_tidak_berbagi_id(): void
+    {
+        $html = Livewire::test(Show::class, ['proposal' => $this->proposalTahapEtik()])
+            ->set('informedConsent.merekrut_partisipan', '1')
+            ->html();
+
+        preg_match_all('/<canvas id="([^"]+)"/', $html, $cocok);
+
+        $this->assertCount(2, $cocok[1], 'harus ada dua kanvas tanda tangan di tahap 2');
+        $this->assertSame(
+            array_values(array_unique($cocok[1])),
+            $cocok[1],
+            'id kanvas bertabrakan: '.implode(' | ', $cocok[1]),
+        );
+    }
+
     // ================= Dibaca & dicetak =================
 
     protected function petugasKepk(): User

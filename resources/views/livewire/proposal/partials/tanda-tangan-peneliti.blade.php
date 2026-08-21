@@ -25,6 +25,19 @@
         </div>
     @endif
 
-    <x-mary-signature wire:model="{{ $model }}" height="180" clear-text="Hapus"
+    {{-- `id` WAJIB dan diturunkan dari jalur wire:model.
+
+         x-mary-signature merakit id kanvasnya dari `md5(serialize($this))` atas
+         argumen KONSTRUKTOR saja — `wire:model` tidak ikut, karena bag atribut
+         baru dipasang Blade setelah konstruksi. Dua pemanggilan dengan height dan
+         hint yang sama karena itu menghasilkan id yang sama persis, lalu
+         `document.getElementById()` pada kanvas kedua menemukan kanvas PERTAMA:
+         kanvas kedua tidak pernah dipasangi SignaturePad dan diam saat digambar.
+
+         Diturunkan dari $model, bukan diminta sebagai parameter terpisah, supaya
+         pemanggil berikutnya tidak bisa lupa mengisinya — jalur model sudah
+         dijamin unik per formulir. --}}
+    <x-mary-signature wire:model="{{ $model }}" :id="str_replace('.', '-', $model)" height="180"
+        clear-text="Hapus"
         hint="Gambar tanda tangan Anda di dalam kotak. Bisa memakai mouse, pena, atau jari di layar sentuh." />
 </div>
