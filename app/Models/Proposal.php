@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Concerns\HasUuidAndAudit;
 use App\Enums\DocumentType;
 use App\Enums\ProposalStatus;
+use App\Enums\TipeProposal;
 use App\Enums\Unit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -24,7 +25,7 @@ class Proposal extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
-        'tahun', 'nomor', 'kode',
+        'tipe_proposal', 'tahun', 'bulan', 'nomor', 'kode',
         'peneliti_utama', 'tim_peneliti', 'judul_penelitian',
         'institusi_asal', 'email', 'phone', 'user_id',
         'status', 'unit_sekarang',
@@ -32,7 +33,9 @@ class Proposal extends Model
 
     protected $casts = [
         'status' => ProposalStatus::class,
+        'tipe_proposal' => TipeProposal::class,
         'unit_sekarang' => Unit::class,
+        'bulan' => 'integer',
     ];
 
     public function user()

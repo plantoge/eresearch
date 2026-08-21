@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\DocumentType;
 use App\Enums\ProposalStatus as S;
+use App\Enums\TipeProposal;
 use App\Enums\Unit;
 use App\Livewire\Proposal\Show;
 use App\Models\Menu;
@@ -53,7 +54,7 @@ class VerifikasiBerkasEtikTest extends TestCase
             'peneliti_utama' => 'Dr. Uji',
             'judul_penelitian' => 'Penelitian Uji',
             'user_id' => $this->peneliti->id,
-        ]);
+        ], TipeProposal::Internal);
 
         foreach ([S::MenungguPresentasi, S::MenungguKelengkapanBerkasEtik, S::MenungguPenunjukanReviewer] as $ke) {
             $this->wf->transition($p, $ke);

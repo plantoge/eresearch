@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\ProposalStatus as S;
+use App\Enums\TipeProposal;
 use App\Models\Proposal;
 use App\Models\User;
 use App\Services\ProposalWorkflow;
@@ -64,7 +65,7 @@ class SemuaHalamanRenderTest extends TestCase
             'peneliti_utama' => 'Dr. Uji',
             'judul_penelitian' => 'Penelitian Uji',
             'user_id' => $peneliti->id,
-        ]);
+        ], TipeProposal::Internal);
 
         $this->assertSame(200, $this->get("/proposal/{$p->id}")->getStatusCode(), 'status awal');
 

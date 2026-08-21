@@ -25,7 +25,7 @@ tidak ada audit trail, laporan tahunan sulit disusun.
 | Hal | Nilai |
 |---|---|
 | Nama tampilan | eResearch Proposal |
-| Kode proposal | `RSPISS-YYYY-###` — increment per tahun, mis. `RSPISS-2026-001` |
+| Kode proposal | 10 digit `TTYYMMNNNN` — tipe (`01` internal / `02` eksternal) + tahun + bulan + urut per tahun, mis. `0126080001`. Terbit saat peneliti mengirim pengajuan; tipe dipilih peneliti dan tidak bisa diubah setelahnya |
 | Alur | 4 tahap sequential, unit pemegang berpindah antar tahap |
 | Sumber kebenaran status | satu kolom `proposal.status` (enum); tahap & unit adalah **turunan** |
 

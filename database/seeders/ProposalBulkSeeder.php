@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Enums\ProposalStatus;
+use App\Enums\TipeProposal;
 use App\Models\User;
+use App\Services\ProposalWorkflow;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -99,11 +101,19 @@ class ProposalBulkSeeder extends Seeder
                 $status = $pool[random_int(0, $jumlahPool - 1)];
                 $dibuat = now()->subMinutes(random_int(0, 1_576_800)); // sebar ±3 tahun
 
+                // Selang-seling supaya data beban memuat kedua tipe; bulan
+                // diambil dari tanggal buat yang disebar, agar kode tetap
+                // konsisten dengan barisnya.
+                $tipe = $nomor % 2 === 0 ? TipeProposal::Internal : TipeProposal::Eksternal;
+                $bulan = (int) $dibuat->month;
+
                 $baris[] = [
                     'id' => (string) Str::uuid7(),
+                    'tipe_proposal' => $tipe->value,
                     'tahun' => $tahun,
+                    'bulan' => $bulan,
                     'nomor' => $nomor,
-                    'kode' => sprintf('RSPISS-%d-%03d', $tahun, $nomor),
+                    'kode' => ProposalWorkflow::formatKode($tipe, $tahun, $bulan, $nomor),
                     'peneliti_utama' => $peneliti->name,
                     'tim_peneliti' => 'Tim Peneliti '.$nomor,
                     'judul_penelitian' => self::TOPIK[$nomor % count(self::TOPIK)]." (Beban #{$nomor})",

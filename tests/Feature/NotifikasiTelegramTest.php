@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\ProposalStatus as S;
+use App\Enums\TipeProposal;
 use App\Models\Proposal;
 use App\Models\User;
 use App\Services\ProposalWorkflow;
@@ -63,7 +64,7 @@ class NotifikasiTelegramTest extends TestCase
             'peneliti_utama' => 'Dr. Uji',
             'judul_penelitian' => 'Penelitian Rahasia Uji',
             'user_id' => $this->peneliti->id,
-        ]);
+        ], TipeProposal::Internal);
 
         $this->actingAs($this->cru);
         $this->wf->transition($p, S::PerluRevisiProposal, 'Berkas kurang');
@@ -90,7 +91,7 @@ class NotifikasiTelegramTest extends TestCase
             'peneliti_utama' => 'Dr. Uji',
             'judul_penelitian' => 'Penelitian Uji',
             'user_id' => $this->peneliti->id,
-        ]);
+        ], TipeProposal::Internal);
 
         Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
 

@@ -3,6 +3,7 @@
 namespace App\Livewire\Proposal;
 
 use App\Enums\DocumentType;
+use App\Enums\TipeProposal;
 use App\Services\ProposalWorkflow;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -11,6 +12,13 @@ use Mary\Traits\Toast;
 class Create extends Component
 {
     use Toast, WithFileUploads;
+
+    /**
+     * '01' internal | '02' eksternal — lihat App\Enums\TipeProposal.
+     * Menentukan dua digit pertama nomor proposal, jadi harus dipilih SEBELUM
+     * pengajuan dikirim; setelah nomor terbit ia tidak bisa diubah.
+     */
+    public string $tipe_proposal = '';
 
     public string $peneliti_utama = '';
 
@@ -34,6 +42,7 @@ class Create extends Component
     public function simpan(ProposalWorkflow $workflow)
     {
         $this->validate([
+            'tipe_proposal' => 'required|in:01,02',
             'peneliti_utama' => 'required|string|max:255',
             'tim_peneliti' => 'nullable|string',
             'judul_penelitian' => 'required|string',
@@ -52,7 +61,7 @@ class Create extends Component
             'institusi_asal' => $user->institusi_asal,
             'email' => $user->email,
             'phone' => $user->phone,
-        ]);
+        ], TipeProposal::from($this->tipe_proposal));
 
         $workflow->simpanDokumen($proposal, DocumentType::SuratPengantar, $this->surat_pengantar);
         $workflow->simpanDokumen($proposal, DocumentType::Proposal, $this->proposal_penelitian);

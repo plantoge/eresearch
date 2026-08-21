@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\DocumentType;
 use App\Enums\ProposalStatus as S;
+use App\Enums\TipeProposal;
 use App\Models\Proposal;
 use App\Models\ProposalDocument;
 use App\Models\Respon;
@@ -37,7 +38,7 @@ class SurveyGateTest extends TestCase
 
         $p = $wf->ajukan([
             'peneliti_utama' => 'X', 'judul_penelitian' => 'Y', 'user_id' => $pemilik->id,
-        ]);
+        ], TipeProposal::Internal);
 
         foreach ([S::MenungguPresentasi, S::MenungguKelengkapanBerkasEtik, S::MenungguPenunjukanReviewer, S::MenungguReviewReviewer,
             S::DisetujuiReviewer, S::MenungguPembayaran, S::MenungguVerifikasiPembayaran,

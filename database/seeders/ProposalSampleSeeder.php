@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\ProposalStatus as S;
+use App\Enums\TipeProposal;
 use App\Models\Proposal;
 use App\Models\User;
 use App\Services\ProposalWorkflow;
@@ -82,7 +83,7 @@ class ProposalSampleSeeder extends Seeder
             'tim_peneliti' => 'Tim Peneliti '.$n,
             'judul_penelitian' => self::TOPIK[$n % count(self::TOPIK)]." (Sampel #{$n})",
             'user_id' => $peneliti->id,
-        ]);
+        ], $n % 2 === 0 ? TipeProposal::Internal : TipeProposal::Eksternal);
 
         // Jalur menuju target — potong sesuai kebutuhan
         Auth::login($cru);

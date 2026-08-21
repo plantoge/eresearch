@@ -67,14 +67,15 @@ komponen yang menyentuh `$proposal->status` langsung:
 
 | Method | Tugas |
 |---|---|
-| `ajukan(array)` | buat proposal + kode + status awal + baris history pertama |
+| `ajukan(array, TipeProposal)` | buat proposal + kode + status awal + baris history pertama. Tipe sengaja parameter tersendiri, bukan key `$data`: ia tercetak permanen di nomor, jadi pemanggil harus gagal keras kalau lupa |
 | `transition($proposal, $ke, $catatan)` | validasi `canGoTo()` → abort 403 bila loncat; set status + `unit_sekarang`; tulis history; semuanya dalam satu transaksi |
 | `simpanDokumen($proposal, $jenis, $file)` | simpan ke disk `dokumen`, versi naik otomatis per jenis |
 | `tugaskanReviewer($proposal, $ids)` | buat/aktifkan penugasan lalu transisi ke `Menunggu Review Reviewer` |
 | `simpanDokumenTelaah($proposal, $file, $telaah)` | simpan berkas rahasia telaah ke `kepk_dokumen_telaah` — sengaja bukan lewat `simpanDokumen()` |
 | `reviewerMerespons($proposal, $keputusan, ...)` | catat `kepk_telaah_reviewer` per ronde, update penugasan, auto-transisi bila semua ACC |
 | `resetPenugasanReviewer($proposal)` | kembalikan semua penugasan ke `menunggu` (ronde baru) |
-| `generateKode()` | `RSPISS-YYYY-###` dengan `pg_advisory_xact_lock` per tahun |
+| `generateKode(TipeProposal)` | terbitkan `[tahun, bulan, nomor, kode]` — deret per tahun dengan `pg_advisory_xact_lock` |
+| `formatKode(...)` *(static)* | satu-satunya perakit format 10 digit `TTYYMMNNNN`; dipakai juga seeder agar format tidak ditulis ulang |
 
 ---
 

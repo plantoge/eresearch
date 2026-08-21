@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\ProposalStatus as S;
+use App\Enums\TipeProposal;
 use App\Models\Proposal;
 use App\Models\User;
 use App\Services\ProposalWorkflow;
@@ -47,7 +48,7 @@ class ReviewerAssignmentTest extends TestCase
         $this->actingAs($this->peneliti);
         $p = $this->wf->ajukan([
             'peneliti_utama' => 'X', 'judul_penelitian' => 'Y', 'user_id' => $this->peneliti->id,
-        ]);
+        ], TipeProposal::Internal);
 
         foreach ([S::MenungguPresentasi, S::MenungguKelengkapanBerkasEtik, S::MenungguPenunjukanReviewer] as $ke) {
             $this->wf->transition($p, $ke);

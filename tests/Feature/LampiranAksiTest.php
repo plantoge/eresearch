@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\DocumentType;
 use App\Enums\ProposalStatus as S;
+use App\Enums\TipeProposal;
 use App\Livewire\Proposal\Show;
 use App\Models\Menu;
 use App\Models\Proposal;
@@ -80,7 +81,7 @@ class LampiranAksiTest extends TestCase
         return $this->wf->ajukan([
             'peneliti_utama' => 'Dr. Uji', 'judul_penelitian' => 'Penelitian Uji',
             'user_id' => $this->peneliti->id,
-        ]);
+        ], TipeProposal::Internal);
     }
 
     protected function jumlahSuratTanggapan(Proposal $p): int

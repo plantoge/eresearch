@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\DocumentType;
 use App\Enums\ProposalStatus;
+use App\Enums\TipeProposal;
 use App\Enums\Unit;
 use App\Models\DokumenTelaah;
 use App\Models\PenugasanReviewer;
@@ -27,17 +28,23 @@ class ProposalWorkflow
 
     /**
      * Buat proposal baru dengan status awal Menunggu Verifikasi Berkas.
+     *
+     * `$tipe` sengaja parameter tersendiri, bukan key di `$data`: ia ikut
+     * tercetak di nomor proposal yang bersifat permanen, jadi pemanggil harus
+     * gagal keras kalau lupa mengisinya — bukan diam-diam jatuh ke Internal.
      */
-    public function ajukan(array $data): Proposal
+    public function ajukan(array $data, TipeProposal $tipe): Proposal
     {
-        return DB::transaction(function () use ($data) {
-            [$tahun, $nomor, $kode] = $this->generateKode();
+        return DB::transaction(function () use ($data, $tipe) {
+            [$tahun, $bulan, $nomor, $kode] = $this->generateKode($tipe);
 
             $status = ProposalStatus::MenungguVerifikasiBerkas;
 
             $proposal = Proposal::create([
                 ...$data,
+                'tipe_proposal' => $tipe,
                 'tahun' => $tahun,
+                'bulan' => $bulan,
                 'nomor' => $nomor,
                 'kode' => $kode,
                 'user_id' => $data['user_id'] ?? Auth::id(),
@@ -192,14 +199,29 @@ class ProposalWorkflow
     }
 
     /**
-     * Kode proposal format RSPISS-YYYY-### (D6), nomor increment per tahun.
-     * Lock baris tahun berjalan agar bebas race.
+     * Satu-satunya tempat nomor proposal dirakit — dipakai juga oleh seeder,
+     * supaya format tidak pernah ditulis ulang di dua tempat.
      *
-     * @return array{0:int,1:int,2:string}
+     * Bentuknya 10 digit rapat: tipe(2) + tahun(2) + bulan(2) + urut(4).
+     * Contoh: 0126080001 = internal, Agustus 2026, urutan ke-1.
      */
-    public function generateKode(): array
+    public static function formatKode(TipeProposal $tipe, int $tahun, int $bulan, int $nomor): string
     {
-        $tahun = (int) now()->year;
+        return sprintf('%s%02d%02d%04d', $tipe->value, $tahun % 100, $bulan, $nomor);
+    }
+
+    /**
+     * Terbitkan nomor proposal (D6). Deret `nomor` increment **per tahun** dan
+     * dipakai bersama oleh internal & eksternal — bulan hanya menandai kapan
+     * nomor terbit, bukan pembatas deret. Lock tahun berjalan agar bebas race.
+     *
+     * @return array{0:int,1:int,2:int,3:string} [tahun, bulan, nomor, kode]
+     */
+    public function generateKode(TipeProposal $tipe): array
+    {
+        $sekarang = now();
+        $tahun = (int) $sekarang->year;
+        $bulan = (int) $sekarang->month;
 
         // PG melarang FOR UPDATE + agregat; pakai advisory lock per tahun
         // (rilis otomatis saat transaksi selesai). Unique(tahun,nomor) tetap
@@ -212,9 +234,7 @@ class ProposalWorkflow
             ->where('tahun', $tahun)
             ->max('nomor') + 1;
 
-        $kode = sprintf('RSPISS-%d-%03d', $tahun, $nomor);
-
-        return [$tahun, $nomor, $kode];
+        return [$tahun, $bulan, $nomor, self::formatKode($tipe, $tahun, $bulan, $nomor)];
     }
 
     protected function catatHistory(Proposal $proposal, ?ProposalStatus $dari, ProposalStatus $ke, ?string $catatan): void

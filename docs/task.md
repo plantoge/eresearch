@@ -79,6 +79,33 @@ mengerjakan tanpa menebak:
 
 ## 3. Belum Dikerjakan
 
+### Migrate nomor proposal format baru di DB kerja & server
+**Kenapa:** format nomor proposal berganti dari `RSPISS-YYYY-###` menjadi 10 digit
+`TTYYMMNNNN` (mis. `0126080001`). Migration `2026_08_21_000000_tambah_tipe_dan_bulan_proposal`
+sudah ada tapi **belum dijalankan** di `cru` maupun `eprotocol` — hanya di `cru_test` lewat
+suite tes.
+**Kondisi selesai:** `artisan migrate` jalan di kedua database; proposal lama masih bernomor
+format lama (kolom `tipe_proposal` terisi `01`, `bulan` di-backfill dari `created_at`) dan
+proposal baru terbit dengan format baru. Kalau data lama memang dummy, `migrate:fresh --seed`
+lebih rapi karena seluruh nomor jadi seragam.
+**Catatan:** migration sengaja menambah kolom dengan default sementara lalu melepas
+default-nya, supaya `migrate` tidak gagal di database yang sudah berisi baris **dan** nilai
+tetap wajib datang dari pemanggil. Perakit formatnya satu tempat:
+`ProposalWorkflow::formatKode()`.
+
+### Form telaah reviewer & form-form KEPK
+**Kenapa:** formulir telaah protokol KEPK (45 item Ya/Tidak/NA + PSP) belum ada di aplikasi;
+reviewer sekarang hanya punya dua tombol + satu catatan.
+**Kondisi selesai:** reviewer bisa mengisi formulir telaah lengkap dari halaman kerjanya,
+hasilnya tersimpan dan terbaca KEPK.
+**Catatan:** kebutuhannya di `docs/fitur/fitur-form-telaah-reviewer.md`. Keputusan yang sudah
+diambil saat pembahasan: form muncul sebagai **modal card** di halaman reviewer, keputusan
+memakai 4 opsi formulir (Approved/Minor/Major/Disapproved) yang **dipetakan ke dua status
+penugasan** yang sudah ada, semua item boleh dilewati (hanya keputusan + ringkasan yang
+wajib), unggahan berkas tanggapan **dihapus**, dan isian identitas diambil dari
+`rspi.proposal` — tidak menambah kolom identitas di `kepk_telaah_reviewer`. Perlu tabel anak
+untuk item telaah; `master_aspek`/`master_pertanyaan` **bukan** kandidat (itu modul survei).
+
 ### Nyalakan notifikasi Telegram di server
 **Kenapa:** kodenya sudah jadi dan tertutup tes, tapi `TELEGRAM_NOTIFIKASI_AKTIF` masih
 `false` dan belum ada bot/grup sungguhan. Sampai itu diisi, fiturnya tidak melakukan apa pun.

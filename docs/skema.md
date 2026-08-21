@@ -97,7 +97,9 @@ erDiagram
 
     proposal {
         uuid id PK
+        string tipe_proposal
         smallint tahun
+        smallint bulan
         bigint nomor
         string kode UK
         uuid user_id FK
@@ -165,9 +167,11 @@ kolom tahapan (turunan status), dan **tidak ada data kerja unit** — itu ada di
 | Kolom | Tipe | Keterangan |
 |---|---|---|
 | `id` | uuid | PK |
-| `tahun` | smallint | tahun pengajuan |
-| `nomor` | bigint | urut per tahun |
-| `kode` | varchar **unique** | `RSPISS-YYYY-###` |
+| `tipe_proposal` | varchar(2) | cast enum `TipeProposal` — `01` internal, `02` eksternal; dipilih peneliti saat mengajukan |
+| `tahun` | smallint | tahun pengajuan, **empat digit** (`2026`) |
+| `bulan` | smallint | bulan terbitnya nomor, 1–12 |
+| `nomor` | bigint | urut per tahun; internal & eksternal berbagi satu deret |
+| `kode` | varchar **unique** | 10 digit rapat: tipe(2)+tahun(2)+bulan(2)+urut(4), mis. `0126080001` |
 | `peneliti_utama` | varchar | |
 | `tim_peneliti` | text null | |
 | `judul_penelitian` | text | |
@@ -374,6 +378,7 @@ berkas yang belum tentu ada. Yang mengunggah CRU (`milikAdmin()` = true), lewat
 
 | Enum | Nilai |
 |---|---|
+| `TipeProposal` | `01` internal, `02` eksternal — plus `label()`, `keterangan()`. **Nilainya tidak boleh diubah** begitu ada proposal di database: ia tercetak di kolom `kode` |
 | `TujuanPembayaran` | `cru`, `kepk` — plus `jenisDokumen()` yang memetakan ke `DocumentType` |
 | `StatusPembayaran` | `menunggu`, `terverifikasi`, `ditolak` — plus `label()`, `warna()` |
 | `JenisTelaah` | `exempted`, `expedited`, `full_board` |
@@ -448,7 +453,7 @@ yang ditampilkan ke peneliti pada Tahap 3.
 | D3 | Kosakata unit | enum `Unit` = `penelitian\|kaji_etik\|reviewer` di semua tabel |
 | D4 | Jalan mundur | verifikasi pembayaran → menunggu pembayaran; verifikasi akhir → pelaksanaan; plus `Dibatalkan` dari semua status non-terminal |
 | D5 | Survey per proposal | `respon.proposal_id` + partial unique; gate unduh di `DocumentDownloadController` lewat `sudahIsiSurvey()` |
-| D6 | Kode proposal | `RSPISS-YYYY-###`; kolom `tahun` + `nomor` dengan `unique(tahun, nomor)`, dijaga `pg_advisory_xact_lock` |
+| D6 | Kode proposal | 10 digit `TTYYMMNNNN` (mis. `0126080001`); dirakit satu tempat di `ProposalWorkflow::formatKode()`, deret `nomor` per tahun dengan `unique(tahun, nomor)` dijaga `pg_advisory_xact_lock`. Bulan hanya penanda terbit, **bukan** pembatas deret; internal & eksternal berbagi deret yang sama |
 | D7 | Pemisahan CRU/KEPK | **satu pengajuan, dua berkas kerja**: satu `proposal` dengan satu rantai status; data & keputusan tiap unit di tabel `cru_*` / `kepk_*` sendiri |
 | D8 | Schema | dua schema — `public` untuk tabel bawaan, `rspi` untuk seluruh domain. Kelompok CRU/KEPK dinyatakan **prefiks nama tabel**, bukan schema, jadi batasnya tidak bisa ditegakkan `GRANT` |
 | D9 | Kerahasiaan telaah | berkas & komentar telaah di tabel `kepk_*` terpisah dengan route unduh sendiri — bukan disaring dari tabel bersama |

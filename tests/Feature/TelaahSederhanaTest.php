@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\DocumentType;
 use App\Enums\ProposalStatus as S;
+use App\Enums\TipeProposal;
 use App\Livewire\Reviewer\TelaahSederhana;
 use App\Models\Menu;
 use App\Models\PenugasanReviewer;
@@ -65,7 +66,7 @@ class TelaahSederhanaTest extends TestCase
         $p = $this->wf->ajukan([
             'peneliti_utama' => $penelitiUtama, 'judul_penelitian' => 'Judul '.$penelitiUtama,
             'user_id' => $this->peneliti->id,
-        ]);
+        ], TipeProposal::Internal);
 
         foreach ([S::MenungguPresentasi, S::MenungguKelengkapanBerkasEtik, S::MenungguPenunjukanReviewer] as $ke) {
             $this->wf->transition($p, $ke);

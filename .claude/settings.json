@@ -22,7 +22,8 @@
       "Bash(git checkout *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "PowerShell(graphify query \"penyimpanan file upload proposal disk storage\")"
+      "PowerShell(graphify query \"penyimpanan file upload proposal disk storage\")",
+      "Read(//c/Users/simrs/.claude/plugins/cache/claude-plugins-official/superpowers/6.3.0/skills/brainstorming/**)"
     ]
   },
   "hooks": {

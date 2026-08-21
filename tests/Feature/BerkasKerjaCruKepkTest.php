@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\DocumentType;
 use App\Enums\StatusPembayaran;
+use App\Enums\TipeProposal;
 use App\Enums\TujuanPembayaran;
 use App\Models\BerkasPenelitian;
 use App\Models\DokumenTelaah;
@@ -51,7 +52,7 @@ class BerkasKerjaCruKepkTest extends TestCase
             'peneliti_utama' => 'Dr. Uji',
             'judul_penelitian' => 'Penelitian Uji',
             'user_id' => $this->peneliti->id,
-        ]);
+        ], TipeProposal::Internal);
     }
 
     // ===== 1:1 ditegakkan database, bukan hanya konvensi =====

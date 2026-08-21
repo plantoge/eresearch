@@ -1,9 +1,23 @@
-@php use App\Enums\DocumentType; @endphp
+@php
+    use App\Enums\DocumentType;
+    use App\Enums\TipeProposal;
+
+    // Radio, bukan select: pilihan ini menentukan dua digit pertama nomor
+    // proposal yang terbit permanen, jadi kedua kemungkinannya harus terlihat
+    // sekaligus — bukan tersembunyi di balik dropdown.
+    $tipeProposal = array_map(
+        fn (TipeProposal $t) => ['id' => $t->value, 'name' => $t->label().' — '.$t->keterangan()],
+        TipeProposal::cases(),
+    );
+@endphp
 <div>
     <x-mary-header title="Ajukan Proposal Baru" subtitle="Tahap 1 — berkas awal" separator />
 
     <x-mary-card shadow class="max-w-3xl">
         <x-mary-form wire:submit="simpan">
+            <x-mary-radio label="Tipe proposal" wire:model="tipe_proposal" :options="$tipeProposal"
+                hint="Menentukan nomor proposal Anda dan tidak dapat diubah setelah diajukan." />
+
             <x-mary-input label="Peneliti utama" wire:model="peneliti_utama" required />
             <x-mary-textarea label="Tim peneliti" wire:model="tim_peneliti" hint="Pisahkan dengan koma" rows="2" />
             <x-mary-textarea label="Judul penelitian" wire:model="judul_penelitian" rows="3" required />

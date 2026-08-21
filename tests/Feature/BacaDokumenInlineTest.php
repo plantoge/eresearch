@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\DocumentType;
 use App\Enums\ProposalStatus as S;
+use App\Enums\TipeProposal;
 use App\Models\Menu;
 use App\Models\Proposal;
 use App\Models\User;
@@ -52,7 +53,7 @@ class BacaDokumenInlineTest extends TestCase
         $this->actingAs($this->peneliti);
         $p = $this->wf->ajukan([
             'peneliti_utama' => 'Budi', 'judul_penelitian' => 'Judul', 'user_id' => $this->peneliti->id,
-        ]);
+        ], TipeProposal::Internal);
         $this->wf->simpanDokumen($p, DocumentType::Proposal, UploadedFile::fake()->create('proposal.pdf', 100));
 
         foreach ([S::MenungguPresentasi, S::MenungguKelengkapanBerkasEtik, S::MenungguPenunjukanReviewer] as $ke) {
