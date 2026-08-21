@@ -61,7 +61,38 @@
                 @empty
                     <div class="opacity-60 text-sm">Belum ada dokumen.</div>
                 @endforelse
+
+                {{-- Formulir etik bukan berkas unggahan: ia data, jadi tombolnya
+                     "Lihat" (modal) — PDF-nya dirakit saat diminta. --}}
+                @if ($formulirEtik)
+                    <div class="flex items-center justify-between py-2 border-t border-base-200">
+                        <div>
+                            <div class="font-medium text-sm">Formulir Pengajuan Etik</div>
+                            <div class="text-xs opacity-60">
+                                Diisi {{ $formulirEtik->dikirim_pada?->format('d/m/Y H:i') ?: '—' }}
+                            </div>
+                        </div>
+                        <div class="flex gap-1">
+                            <x-mary-button icon="o-eye" class="btn-ghost btn-sm" tooltip="Lihat isian"
+                                @click="$wire.modalFormEtik = true" />
+                            <x-mary-button icon="o-printer" class="btn-ghost btn-sm" tooltip="Cetak PDF"
+                                link="{{ route('formulir-etik.pdf', $proposal) }}" external />
+                        </div>
+                    </div>
+                @endif
             </x-mary-card>
+
+            @if ($formulirEtik)
+                <x-mary-modal wire:model="modalFormEtik" title="Formulir Pengajuan Etik"
+                    subtitle="{{ $proposal->kode }}" box-class="max-w-3xl">
+                    @include('livewire.proposal.partials.formulir-etik-baca', ['formulir' => $formulirEtik])
+                    <x-slot:actions>
+                        <x-mary-button label="Cetak PDF" icon="o-printer"
+                            link="{{ route('formulir-etik.pdf', $proposal) }}" external />
+                        <x-mary-button label="Tutup" @click="$wire.modalFormEtik = false" />
+                    </x-slot:actions>
+                </x-mary-modal>
+            @endif
 
             {{-- Berkas telaah ada di tabel & route terpisah: peneliti tidak punya jalan ke sini. --}}
             @if ($bolehLihatReview && $dokumenTelaah->isNotEmpty())
@@ -119,12 +150,19 @@
                         </x-mary-form>
                     </x-mary-card>
                 @elseif ($proposal->status === ProposalStatus::MenungguKelengkapanBerkasEtik)
-                    <x-mary-card title="Lengkapi Berkas Kaji Etik" subtitle="Tahap 2 — semua wajib PDF" shadow>
+                    <x-mary-card title="Formulir Pengajuan Etik"
+                        subtitle="Tahap 2 — isi formulir lalu lampirkan berkasnya" shadow>
                         <x-mary-form wire:submit="kirimBerkasEtik">
-                            @foreach (DocumentType::wajibTahap2() as $jenis)
-                                <x-mary-file :label="$jenis->label()" :hint="$jenis->hintUnggah()"
-                                    wire:model="fileEtik.{{ $jenis->value }}" accept="application/pdf" required />
-                            @endforeach
+                            @include('livewire.proposal.partials.formulir-etik-isian')
+
+                            <div class="pt-2">
+                                <div class="font-semibold text-sm mb-2">Berkas yang dilampirkan</div>
+                                @foreach (DocumentType::wajibTahap2() as $jenis)
+                                    <x-mary-file :label="$jenis->label()" :hint="$jenis->hintUnggah()"
+                                        wire:model="fileEtik.{{ $jenis->value }}" accept="application/pdf" required />
+                                @endforeach
+                            </div>
+
                             <x-slot:actions><x-mary-button label="Kirim ke KEPK" type="submit" class="btn-primary"
                                     spinner="kirimBerkasEtik" /></x-slot:actions>
                         </x-mary-form>
@@ -142,6 +180,12 @@
                             </x-mary-alert>
                         @endif
                         <x-mary-form wire:submit="kirimPerbaikanBerkasEtik">
+                            {{-- Formulir ikut bisa dikoreksi: catatan KEPK sering menyangkut
+                                 jawaban Poin C, bukan berkasnya. --}}
+                            @if ($formulirEtik)
+                                @include('livewire.proposal.partials.formulir-etik-isian')
+                            @endif
+
                             {{-- Proposal ikut ditelaah tim KEPK, jadi koreksi mereka bisa
                                  menyangkut proposalnya — bukan hanya berkas etik. --}}
                             <x-mary-file label="{{ DocumentType::Proposal->label() }} (bila ikut dikoreksi)"
@@ -162,6 +206,9 @@
                     <x-mary-card title="Perbaiki Berkas Etik"
                         subtitle="Sesuai komentar Reviewer — unggah berkas yang direvisi saja" shadow>
                         <x-mary-form wire:submit="kirimRevisiEtik">
+                            @if ($formulirEtik)
+                                @include('livewire.proposal.partials.formulir-etik-isian')
+                            @endif
                             @foreach (DocumentType::wajibTahap2() as $jenis)
                                 <x-mary-file :label="$jenis->label()" :hint="$jenis->hintUnggah()"
                                     wire:model="fileEtik.{{ $jenis->value }}" accept="application/pdf" />

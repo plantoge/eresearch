@@ -10,6 +10,9 @@ enum DocumentType: string
     case KajiEtik = 'kaji_etik';
     case SertifikatGcp = 'sertifikat_gcp';
     // Tahap 2
+    // Tidak lagi diunggah: sejak formulir etik jadi isian terstruktur
+    // (App\Models\FormEtik), case ini hanya dipertahankan supaya proposal lama
+    // yang terlanjur mengunggah PDF-nya tetap tampil di kartu Dokumen.
     case FormKajiEtik = 'form_kaji_etik';
     case InformedConsent = 'informed_consent';
     case KerahasiaanData = 'kerahasiaan_data';
@@ -40,7 +43,7 @@ enum DocumentType: string
             self::Proposal => 'Proposal Penelitian',
             self::KajiEtik => 'Kaji Etik (awal, opsional)',
             self::SertifikatGcp => 'Sertifikat GCP',
-            self::FormKajiEtik => 'Form Kaji Etik',
+            self::FormKajiEtik => 'Form Kaji Etik (unggahan lama)',
             self::InformedConsent => 'Informed Consent',
             self::Pks => 'Perjanjian Kerjasama (PKS)',
             self::KerahasiaanData => 'Kerahasiaan Data',
@@ -70,7 +73,7 @@ enum DocumentType: string
     /** @return self[] */
     public static function wajibTahap2(): array
     {
-        return [self::FormKajiEtik, self::InformedConsent, self::KerahasiaanData];
+        return [self::InformedConsent, self::KerahasiaanData];
     }
 
     /**

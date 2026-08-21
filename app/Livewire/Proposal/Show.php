@@ -2,8 +2,10 @@
 
 namespace App\Livewire\Proposal;
 
+use App\Enums\BentukKerjasama;
 use App\Enums\DocumentType;
 use App\Enums\JenisTelaah;
+use App\Enums\KelengkapanDokumen;
 use App\Enums\KeputusanEtik;
 use App\Enums\ProposalStatus;
 use App\Enums\StatusPembayaran;
@@ -11,6 +13,7 @@ use App\Enums\TujuanPembayaran;
 use App\Enums\Unit;
 use App\Models\BerkasPenelitian;
 use App\Models\DokumenTelaah;
+use App\Models\FormEtik;
 use App\Models\InformasiKontak;
 use App\Models\IzinPenelitian;
 use App\Models\MasterAspek;
@@ -21,6 +24,7 @@ use App\Models\Respon;
 use App\Models\TelaahReviewer;
 use App\Models\User;
 use App\Services\ProposalWorkflow;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Mary\Traits\Toast;
@@ -52,7 +56,36 @@ class Show extends Component
     // Upload generik per aksi
     public $fileUpload;          // satu file (surat tanggapan/penolakan/izin/bukti bayar/revisi proposal)
 
-    public $fileEtik = [];       // form_kaji_etik, informed_consent, kerahasiaan_data
+    public $fileEtik = [];       // informed_consent, kerahasiaan_data
+
+    /**
+     * Poin B formulir etik: huruf butir => dicentang. Butir yang tidak dicentang
+     * boleh absen dari array — checkbox HTML memang tidak mengirim apa pun saat
+     * kosong, dan absennya sudah berarti "tidak dilampirkan".
+     */
+    public array $kelengkapan = [];
+
+    /** Modal baca formulir etik di kartu Dokumen. */
+    public bool $modalFormEtik = false;
+
+    /**
+     * Poin C formulir etik. Jawaban ya/tidak disimpan sebagai '1'/'0' — BUKAN
+     * bool — supaya "belum dijawab" ('') bisa dibedakan dari "tidak" dan
+     * ditangkap `required`; bool tidak punya nilai ketiga untuk itu.
+     */
+    public array $formEtik = [
+        'multisenter' => '',
+        'senter_utama' => '',
+        'senter_satelit' => '',
+        'kerjasama' => '',
+        'jumlah_negara' => '',
+        'peneliti_asing' => '',
+        'pernah_diajukan' => '',
+        'disetujui_komisi_lain' => '',
+        'sampel_ke_luar_negeri' => '',
+        'negara_tujuan' => '',
+        'registrasi_bpom' => '',
+    ];
 
     public $filePks;             // diunggah CRU, terpisah dari berkas etik peneliti
 
@@ -78,13 +111,7 @@ class Show extends Component
     {
         $user = auth()->user();
 
-        abort_unless(
-            $proposal->user_id === $user->id
-                || $user->canAny(['antrian-cru.read', 'kaji-etik.read'])
-                || ($user->can('antrian-reviewer.read')
-                    && $proposal->penugasanReviewer()->where('reviewer_id', $user->id)->exists()),
-            403,
-        );
+        abort_unless($proposal->bolehDilihatOleh($user), 403);
 
         $this->proposal = $proposal;
 
@@ -96,12 +123,138 @@ class Show extends Component
             $this->media_presentasi = $berkas->media_presentasi ?? '';
         }
 
+        if ($form = $proposal->formEtik) {
+            $this->isiUlangFormEtik($form);
+        }
+
         if ($protokol = $proposal->protokolEtik) {
             $this->nomor_protokol = $protokol->nomor_protokol ?? '';
             $this->jenis_telaah = $protokol->jenis_telaah?->value ?? '';
             $this->tanggal_sidang = $protokol->tanggal_sidang?->format('Y-m-d\TH:i') ?? '';
             $this->nomor_ec = $protokol->nomor_ec ?? '';
         }
+    }
+
+    /**
+     * Formulir etik proposal ini sudah pernah diisi?
+     *
+     * Jalur perbaikan memakainya untuk memutuskan apakah Poin B & C ikut
+     * divalidasi: proposal lama yang dulu mengunggah PDF `form_kaji_etik` tidak
+     * punya jawaban apa pun, dan menuntutnya di sini akan mengunci berkasnya di
+     * layar perbaikan tanpa jalan keluar.
+     */
+    protected function formEtikSudahDiisi(): bool
+    {
+        return $this->proposal->formEtik !== null;
+    }
+
+    /** Muat jawaban formulir etik yang tersimpan ke properti form. */
+    protected function isiUlangFormEtik(FormEtik $form): void
+    {
+        $this->kelengkapan = $form->kelengkapan ?? [];
+
+        $this->formEtik = [
+            'multisenter' => self::keForm($form->multisenter),
+            'senter_utama' => $form->senter_utama ?? '',
+            'senter_satelit' => $form->senter_satelit ?? '',
+            'kerjasama' => $form->kerjasama?->value ?? '',
+            'jumlah_negara' => $form->jumlah_negara ?? '',
+            'peneliti_asing' => self::keForm($form->peneliti_asing),
+            'pernah_diajukan' => self::keForm($form->pernah_diajukan),
+            'disetujui_komisi_lain' => self::keForm($form->disetujui_komisi_lain),
+            'sampel_ke_luar_negeri' => self::keForm($form->sampel_ke_luar_negeri),
+            'negara_tujuan' => $form->negara_tujuan ?? '',
+            'registrasi_bpom' => $form->registrasi_bpom ?? '',
+        ];
+    }
+
+    /** bool database => '1'/'0'/'' (belum dijawab) yang dipakai radio di form. */
+    protected static function keForm(?bool $nilai): string
+    {
+        return $nilai === null ? '' : ($nilai ? '1' : '0');
+    }
+
+    /** Jawaban Poin C bernilai "ya"? Dipakai untuk syarat lanjutan. */
+    protected function ya(string $kunci): bool
+    {
+        return ($this->formEtik[$kunci] ?? '') === '1';
+    }
+
+    /**
+     * Aturan Poin B & C.
+     *
+     * Tidak ada butir Poin B yang wajib dicentang: sebagian butir memang hanya
+     * berlaku pada penelitian tertentu, dan mewajibkannya hanya akan melatih
+     * peneliti mencentang tanpa membaca. Yang ditegakkan adalah Poin C — di situ
+     * setiap pertanyaan berlaku untuk semua penelitian.
+     */
+    protected function aturanFormEtik(): array
+    {
+        return [
+            'kelengkapan' => 'array',
+            'kelengkapan.*' => 'boolean',
+
+            'formEtik.multisenter' => 'required|boolean',
+            'formEtik.senter_utama' => [Rule::requiredIf(fn () => $this->ya('multisenter')), 'nullable', 'string', 'max:255'],
+            'formEtik.senter_satelit' => 'nullable|string|max:255',
+
+            'formEtik.kerjasama' => ['required', Rule::enum(BentukKerjasama::class)],
+            'formEtik.jumlah_negara' => [
+                Rule::requiredIf(fn () => ($this->formEtik['kerjasama'] ?? '') === BentukKerjasama::Internasional->value),
+                'nullable', 'string', 'max:255',
+            ],
+            'formEtik.peneliti_asing' => 'required|boolean',
+
+            'formEtik.pernah_diajukan' => 'required|boolean',
+            'formEtik.disetujui_komisi_lain' => [Rule::requiredIf(fn () => $this->ya('pernah_diajukan')), 'nullable', 'boolean'],
+
+            'formEtik.sampel_ke_luar_negeri' => 'required|boolean',
+            'formEtik.negara_tujuan' => [Rule::requiredIf(fn () => $this->ya('sampel_ke_luar_negeri')), 'nullable', 'string', 'max:255'],
+
+            'formEtik.registrasi_bpom' => 'nullable|string',
+        ];
+    }
+
+    /**
+     * Simpan Poin B & C.
+     *
+     * Jawaban lanjutan yang syaratnya tidak lagi berlaku dikosongkan, bukan
+     * dibiarkan: menyimpan "senter utama" pada penelitian yang baru saja diubah
+     * jadi bukan-multisenter membuat KEPK membaca dua jawaban yang bertentangan.
+     */
+    protected function simpanFormEtik(): void
+    {
+        $f = $this->formEtik;
+        $multisenter = $f['multisenter'] === '1';
+        $internasional = $f['kerjasama'] === BentukKerjasama::Internasional->value;
+        $pernahDiajukan = $f['pernah_diajukan'] === '1';
+        $keLuarNegeri = $f['sampel_ke_luar_negeri'] === '1';
+
+        $kelengkapan = [];
+        foreach (KelengkapanDokumen::cases() as $butir) {
+            $kelengkapan[$butir->value] = (bool) ($this->kelengkapan[$butir->value] ?? false);
+        }
+
+        $this->proposal->formEtik()->updateOrCreate(
+            ['proposal_id' => $this->proposal->id],
+            [
+                'kelengkapan' => $kelengkapan,
+                'multisenter' => $multisenter,
+                'senter_utama' => $multisenter ? ($f['senter_utama'] ?: null) : null,
+                'senter_satelit' => $multisenter ? ($f['senter_satelit'] ?: null) : null,
+                'kerjasama' => $f['kerjasama'],
+                'jumlah_negara' => $internasional ? ($f['jumlah_negara'] ?: null) : null,
+                'peneliti_asing' => $f['peneliti_asing'] === '1',
+                'pernah_diajukan' => $pernahDiajukan,
+                'disetujui_komisi_lain' => $pernahDiajukan ? ($f['disetujui_komisi_lain'] === '1') : null,
+                'sampel_ke_luar_negeri' => $keLuarNegeri,
+                'negara_tujuan' => $keLuarNegeri ? ($f['negara_tujuan'] ?: null) : null,
+                'registrasi_bpom' => $f['registrasi_bpom'] ?: null,
+                'dikirim_pada' => now(),
+            ],
+        );
+
+        $this->proposal->unsetRelation('formEtik');
     }
 
     protected function pemilik(): bool
@@ -154,12 +307,17 @@ class Show extends Component
         $this->pindah(ProposalStatus::MenungguVerifikasiRevisi, $this->catatan);
     }
 
-    /** Lengkapi 4 berkas etik (T2) → diarahkan ke KEPK untuk penunjukan reviewer. */
+    /**
+     * Lengkapi berkas etik (T2) → diarahkan ke KEPK untuk penunjukan reviewer.
+     *
+     * Formulir Pengajuan Etik diisi di sini sebagai data (Poin B & C), bukan
+     * diunggah sebagai PDF seperti sebelumnya — lihat App\Models\FormEtik.
+     */
     public function kirimBerkasEtik()
     {
         abort_unless($this->pemilik(), 403);
 
-        $rules = [];
+        $rules = $this->aturanFormEtik();
         foreach (DocumentType::wajibTahap2() as $jenis) {
             $rules["fileEtik.{$jenis->value}"] = 'required|'.$jenis->aturanValidasi();
         }
@@ -168,6 +326,8 @@ class Show extends Component
         foreach (DocumentType::wajibTahap2() as $jenis) {
             $this->simpanFile($jenis, $this->fileEtik[$jenis->value]);
         }
+
+        $this->simpanFormEtik();
 
         // Berkas etik masuk → KEPK punya sesuatu untuk dikerjakan, jadi berkas
         // kerjanya dibuat di sini (bukan saat pengajuan, saat KEPK belum terlibat).
@@ -211,6 +371,12 @@ class Show extends Component
     {
         abort_unless($this->pemilik(), 403);
 
+        $adaFormEtik = $this->formEtikSudahDiisi();
+
+        if ($adaFormEtik) {
+            $this->validate($this->aturanFormEtik());
+        }
+
         $adaProposal = false;
 
         if ($this->fileProposal) {
@@ -227,6 +393,10 @@ class Show extends Component
             return;
         }
 
+        if ($adaFormEtik) {
+            $this->simpanFormEtik();
+        }
+
         // Sengaja TIDAK memanggil resetPenugasanReviewer(): di titik ini KEPK belum
         // menunjuk siapa pun, jadi tidak ada penugasan yang perlu di-reset.
         $this->pindah(ProposalStatus::MenungguPenunjukanReviewer, $this->catatan);
@@ -237,10 +407,20 @@ class Show extends Component
     {
         abort_unless($this->pemilik(), 403);
 
+        $adaFormEtik = $this->formEtikSudahDiisi();
+
+        if ($adaFormEtik) {
+            $this->validate($this->aturanFormEtik());
+        }
+
         if (! $this->unggahUlangBerkasEtik()) {
             $this->addError('fileEtik', 'Unggah minimal satu berkas revisi.');
 
             return;
+        }
+
+        if ($adaFormEtik) {
+            $this->simpanFormEtik();
         }
 
         // Ronde baru: semua reviewer kembali "menunggu"
@@ -679,6 +859,7 @@ class Show extends Component
             'dokumenTelaah' => $dokumenTelaah,
             'berkasCru' => $this->proposal->berkasPenelitian,
             'protokolEtik' => $this->proposal->protokolEtik,
+            'formulirEtik' => $this->proposal->formEtik,
             'pembayaran' => $isCru || $isPemilik ? $this->proposal->pembayaran()->get() : collect(),
             'opsiJenisTelaah' => JenisTelaah::cases(),
             'history' => $history,

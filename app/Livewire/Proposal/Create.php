@@ -3,8 +3,10 @@
 namespace App\Livewire\Proposal;
 
 use App\Enums\DocumentType;
+use App\Enums\JenisPenelitian;
 use App\Enums\TipeProposal;
 use App\Services\ProposalWorkflow;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Mary\Traits\Toast;
@@ -26,6 +28,14 @@ class Create extends Component
 
     public string $judul_penelitian = '';
 
+    // Poin A Formulir Pengajuan Etik. Ditanyakan di sini, bukan di formulir etik
+    // tahap 2, karena ketiganya sifat penelitian yang sudah pasti sejak awal.
+    public string $sponsor = '';
+
+    public string $jenis_penelitian = '';
+
+    public string $lokasi_penelitian = '';
+
     public $surat_pengantar;      // pdf wajib
 
     public $proposal_penelitian;  // pdf wajib
@@ -46,6 +56,9 @@ class Create extends Component
             'peneliti_utama' => 'required|string|max:255',
             'tim_peneliti' => 'nullable|string',
             'judul_penelitian' => 'required|string',
+            'sponsor' => 'nullable|string|max:255',
+            'jenis_penelitian' => ['required', Rule::enum(JenisPenelitian::class)],
+            'lokasi_penelitian' => 'required|string|max:255',
             'surat_pengantar' => 'required|'.DocumentType::SuratPengantar->aturanValidasi(),
             'proposal_penelitian' => 'required|'.DocumentType::Proposal->aturanValidasi(),
             'kaji_etik' => 'nullable|'.DocumentType::KajiEtik->aturanValidasi(),
@@ -58,6 +71,9 @@ class Create extends Component
             'peneliti_utama' => $this->peneliti_utama,
             'tim_peneliti' => $this->tim_peneliti,
             'judul_penelitian' => $this->judul_penelitian,
+            'sponsor' => $this->sponsor ?: null,
+            'jenis_penelitian' => $this->jenis_penelitian,
+            'lokasi_penelitian' => $this->lokasi_penelitian,
             'institusi_asal' => $user->institusi_asal,
             'email' => $user->email,
             'phone' => $user->phone,

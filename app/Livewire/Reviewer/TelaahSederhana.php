@@ -297,7 +297,11 @@ class TelaahSederhana extends Component
             ? $proposalTerbuka->documents()
                 ->whereIn('jenis', array_map(
                     fn (DocumentType $d) => $d->value,
-                    [...DocumentType::wajibTahap1(), ...DocumentType::wajibTahap2()]
+                    // FormKajiEtik disebut terpisah: ia sudah bukan berkas wajib
+                    // sejak formulir etik jadi isian terstruktur, tapi proposal
+                    // lama masih menyimpannya sebagai PDF — dan reviewer tetap
+                    // harus bisa membacanya.
+                    [...DocumentType::wajibTahap1(), ...DocumentType::wajibTahap2(), DocumentType::FormKajiEtik]
                 ))
                 ->orderBy('jenis')->orderByDesc('versi')->get()
                 ->groupBy('jenis')->map->first()

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\JenisPenelitian;
 use App\Enums\TipeProposal;
 use App\Livewire\Proposal\Create;
 use App\Models\Proposal;
@@ -42,6 +43,8 @@ class PengajuanTipeProposalTest extends TestCase
             ->set('tipe_proposal', $tipe)
             ->set('peneliti_utama', 'Dr. Uji')
             ->set('judul_penelitian', 'Penelitian Uji')
+            ->set('jenis_penelitian', JenisPenelitian::NonExperimental->value)
+            ->set('lokasi_penelitian', 'RSPI Prof. Dr. Sulianti Saroso')
             ->set('surat_pengantar', UploadedFile::fake()->create('pengantar.pdf', 50, 'application/pdf'))
             ->set('proposal_penelitian', UploadedFile::fake()->create('proposal.pdf', 50, 'application/pdf'));
     }

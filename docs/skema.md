@@ -89,6 +89,7 @@ erDiagram
     proposal ||--o{ cru_pembayaran : "2 tagihan"
     proposal ||--o| cru_izin_penelitian : "izin"
     proposal ||--o| kepk_protokol_etik : "berkas kerja KEPK"
+    proposal ||--o| kepk_form_etik : "formulir etik peneliti"
     proposal ||--o{ kepk_telaah_reviewer : "telaah per ronde"
     proposal ||--o{ kepk_penugasan_reviewer : "penugasan reviewer"
     proposal ||--o| respon : "1 survey aktif"
@@ -141,6 +142,15 @@ erDiagram
         string keputusan
         string nomor_ec
     }
+    kepk_form_etik {
+        uuid proposal_id UK
+        json kelengkapan
+        boolean multisenter
+        string kerjasama
+        boolean pernah_diajukan
+        boolean sampel_ke_luar_negeri
+        timestamp dikirim_pada
+    }
     kepk_penugasan_reviewer {
         uuid proposal_id FK
         uuid reviewer_id FK
@@ -184,6 +194,9 @@ kolom tahapan (turunan status), dan **tidak ada data kerja unit** — itu ada di
 | `tim_peneliti` | text null | |
 | `judul_penelitian` | text | |
 | `institusi_asal` / `email` / `phone` | varchar null | snapshot pengaju saat mengajukan |
+| `sponsor` | varchar null | Poin A.6 formulir etik — pemberi grant, boleh kosong |
+| `jenis_penelitian` | varchar null | cast enum `JenisPenelitian` — Poin A.7, **wajib** di form pengajuan |
+| `lokasi_penelitian` | varchar null | Poin A.8 — **wajib** di form pengajuan |
 | `user_id` | uuid | pengaju |
 | `status` | varchar | cast enum `ProposalStatus` — **satu-satunya sumber kebenaran alur** |
 | `unit_sekarang` | varchar null | cast enum `Unit`; **turunan status**, disimpan agar antrian ter-index |
@@ -279,6 +292,29 @@ digabung jadi satu jenis, kedua bukti saling menaikkan versi dan riwayat revisin
 | `keputusan` | enum `KeputusanEtik` = `layak` \| `tidak_layak` |
 | `nomor_ec` / `tanggal_terbit_ec` / `berlaku_sampai` | ethical clearance yang diterbitkan |
 
+### `rspi.kepk_form_etik` — 1:1
+
+Formulir Pengajuan Etik yang **diisi peneliti** (Poin B & C), menggantikan unggahan PDF
+`form_kaji_etik`. Terpisah dari `kepk_protokol_etik` karena tabel itu ditulis KEPK,
+sedangkan tabel ini ditulis peneliti. Poin A tidak disalin ke sini — jawabannya sudah ada
+di `proposal`.
+
+| Kolom | Keterangan |
+|---|---|
+| `proposal_id` | partial unique |
+| `kelengkapan` | json `{a..j: bool}` — ceklist Poin B, enum `KelengkapanDokumen`. **Deklarasi**, bukan slot unggahan; tidak satu pun butir wajib dicentang |
+| `multisenter` | bool. Bila true → `senter_utama` (wajib), `senter_satelit` |
+| `kerjasama` | enum `BentukKerjasama` = `bukan` \| `nasional` \| `internasional`. Bila internasional → `jumlah_negara` wajib |
+| `peneliti_asing` | bool — kolom sendiri, bukan pilihan `kerjasama`: bisa benar bersamaan dengan nasional maupun internasional |
+| `pernah_diajukan` | bool. Bila true → `disetujui_komisi_lain` wajib |
+| `sampel_ke_luar_negeri` | bool. Bila true → `negara_tujuan` wajib |
+| `registrasi_bpom` | text null — jawaban bebas Poin C.5 |
+| `dikirim_pada` | timestamp saat formulir dikirim/dikoreksi |
+
+Jawaban lanjutan yang syaratnya gugur **dikosongkan saat disimpan**, supaya tidak ada dua
+jawaban yang saling bertentangan. Dibaca lewat modal di kartu Dokumen dan dicetak PDF di
+`GET /proposal/{proposal}/formulir-etik.pdf` (otorisasi `Proposal::bolehDilihatOleh()`).
+
 ### `rspi.kepk_penugasan_reviewer`
 Penugasan reviewer oleh KEPK — bisa lebih dari satu per proposal.
 
@@ -358,7 +394,7 @@ Helper lain di enum ini: `tahapan()` (1–4, `null` untuk terminal) · `unit()` 
 | Kelompok | Nilai |
 |---|---|
 | Tahap 1 | `surat_pengantar`, `proposal` *(wajib)*; `kaji_etik`, `sertifikat_gcp` *(opsional)* |
-| Tahap 2 | `form_kaji_etik`, `informed_consent`, `kerahasiaan_data` *(semua wajib)* |
+| Tahap 2 | `informed_consent`, `kerahasiaan_data` *(keduanya wajib)*; `form_kaji_etik` **tidak lagi diunggah** — digantikan isian terstruktur `rspi.kepk_form_etik`, nilainya dipertahankan agar unggahan lama tetap tampil |
 | Tahap 3 | `bukti_bayar_cru`, `bukti_bayar_kepk` *(keduanya wajib)* |
 | Tahap 4 | `laporan_penelitian`, `raw_data` |
 | Output admin | `izin_draft`, `izin_final`, `surat_penolakan`, `surat_tanggapan` |

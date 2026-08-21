@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\BentukKerjasama;
 use App\Enums\DocumentType;
 use App\Enums\ProposalStatus as S;
 use App\Enums\TipeProposal;
@@ -79,7 +80,7 @@ class PksCruTest extends TestCase
 
         $this->assertNotContains(DocumentType::Pks, $wajib);
         $this->assertSame(
-            [DocumentType::FormKajiEtik, DocumentType::InformedConsent, DocumentType::KerahasiaanData],
+            [DocumentType::InformedConsent, DocumentType::KerahasiaanData],
             $wajib,
         );
     }
@@ -109,6 +110,15 @@ class PksCruTest extends TestCase
         foreach (DocumentType::wajibTahap2() as $jenis) {
             $komponen->set('fileEtik.'.$jenis->value, $this->pdf("{$jenis->value}.pdf"));
         }
+
+        // Poin C formulir etik — wajib dijawab sejak formulir jadi isian
+        // terstruktur; isinya tidak relevan bagi PKS, yang diuji di sini hanya
+        // bahwa PKS tidak ikut menghalangi.
+        $komponen->set('formEtik.multisenter', '0')
+            ->set('formEtik.kerjasama', BentukKerjasama::Bukan->value)
+            ->set('formEtik.peneliti_asing', '0')
+            ->set('formEtik.pernah_diajukan', '0')
+            ->set('formEtik.sampel_ke_luar_negeri', '0');
 
         $komponen->call('kirimBerkasEtik')->assertHasNoErrors();
 

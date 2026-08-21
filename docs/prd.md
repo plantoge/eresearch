@@ -234,10 +234,10 @@ oleh `ProposalWorkflow::transition()`. Daftar transisi lengkap ada di [skema.md]
 | Jadwalkan → `Menunggu Presentasi` | CRU | tanggal, kategori, media presentasi |
 | Tolak → `Ditolak` | CRU | `surat_penolakan` (wajib) |
 | Loloskan → `Menunggu Kelengkapan Berkas Etik` | CRU | catatan (opsional). Tersedia dari `Menunggu Presentasi` **maupun** `Menunggu Verifikasi Revisi` |
-| Lengkapi etik → `Menunggu Penunjukan Reviewer` | Peneliti | **form_kaji_etik**, **informed_consent**, **kerahasiaan_data** (semua wajib) |
+| Lengkapi etik → `Menunggu Penunjukan Reviewer` | Peneliti | **Formulir Pengajuan Etik** (isian Poin B & C, bukan unggahan) + **informed_consent**, **kerahasiaan_data** (semua wajib) |
 | Unggah PKS *(status tetap)* | CRU | `pks` — kapan saja, termasuk setelah proposal `Selesai`. Tidak menahan tahap mana pun |
 | Kembalikan berkas → `Perlu Revisi Berkas Etik` | KEPK | catatan **wajib** (sebutkan berkas mana yang salah); opsional `surat_tanggapan` |
-| Perbaiki berkas → `Menunggu Penunjukan Reviewer` | Peneliti | unggah ulang **≥1** dari 3 berkas etik **atau `proposal`** — tim KEPK menelaah proposalnya juga, jadi koreksi bisa menyangkut proposal |
+| Perbaiki berkas → `Menunggu Penunjukan Reviewer` | Peneliti | unggah ulang **≥1** berkas etik **atau `proposal`** — tim KEPK menelaah proposalnya juga, jadi koreksi bisa menyangkut proposal. Formulir Pengajuan Etik ikut bisa disunting di kartu yang sama |
 | Tunjuk reviewer → `Menunggu Review Reviewer` | KEPK | pilih ≥1 user ber-role reviewer. Hanya setelah berkas dinilai lengkap |
 | Tanggapan reviewer *(status tetap)* | Reviewer | komentar (wajib bila minta revisi) + opsional berkas telaah (`kepk_dokumen_telaah`) + ACC/revisi |
 | Teruskan revisi → `Perlu Revisi Reviewer` | KEPK | catatan untuk peneliti (wajib); opsional `surat_tanggapan`. Hanya aktif bila ada reviewer yang meminta revisi |

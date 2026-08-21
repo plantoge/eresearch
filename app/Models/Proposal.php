@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Concerns\HasUuidAndAudit;
 use App\Enums\DocumentType;
+use App\Enums\JenisPenelitian;
 use App\Enums\ProposalStatus;
 use App\Enums\TipeProposal;
 use App\Enums\Unit;
@@ -28,12 +29,14 @@ class Proposal extends Model
         'tipe_proposal', 'tahun', 'bulan', 'nomor', 'kode',
         'peneliti_utama', 'tim_peneliti', 'judul_penelitian',
         'institusi_asal', 'email', 'phone', 'user_id',
+        'sponsor', 'jenis_penelitian', 'lokasi_penelitian',
         'status', 'unit_sekarang',
     ];
 
     protected $casts = [
         'status' => ProposalStatus::class,
         'tipe_proposal' => TipeProposal::class,
+        'jenis_penelitian' => JenisPenelitian::class,
         'unit_sekarang' => Unit::class,
         'bulan' => 'integer',
     ];
@@ -41,6 +44,22 @@ class Proposal extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Siapa boleh melihat isi proposal ini: pemiliknya, petugas CRU/KEPK, dan
+     * reviewer yang benar-benar ditugaskan padanya.
+     *
+     * Ditaruh di model karena dipakai dua pintu masuk yang berbeda — halaman
+     * proposal dan unduhan formulir etik. Sebelum ini aturannya hanya hidup di
+     * Proposal\Show::mount(), jadi setiap pintu baru harus mengingat menyalinnya.
+     */
+    public function bolehDilihatOleh(User $user): bool
+    {
+        return $this->user_id === $user->id
+            || $user->canAny(['antrian-cru.read', 'kaji-etik.read'])
+            || ($user->can('antrian-reviewer.read')
+                && $this->penugasanReviewer()->where('reviewer_id', $user->id)->exists());
     }
 
     public function documents()
@@ -75,6 +94,12 @@ class Proposal extends Model
     public function protokolEtik()
     {
         return $this->hasOne(ProtokolEtik::class, 'proposal_id');
+    }
+
+    /** Formulir Pengajuan Etik (Poin B & C) — diisi peneliti, dibaca KEPK. */
+    public function formEtik()
+    {
+        return $this->hasOne(FormEtik::class, 'proposal_id');
     }
 
     public function telaahReviewer()

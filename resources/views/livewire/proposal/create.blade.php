@@ -1,5 +1,6 @@
 @php
     use App\Enums\DocumentType;
+    use App\Enums\JenisPenelitian;
     use App\Enums\TipeProposal;
 
     // Radio, bukan select: pilihan ini menentukan dua digit pertama nomor
@@ -8,6 +9,13 @@
     $tipeProposal = array_map(
         fn (TipeProposal $t) => ['id' => $t->value, 'name' => $t->label().' — '.$t->keterangan()],
         TipeProposal::cases(),
+    );
+
+    // Poin A.7 formulir etik. Radio karena hanya dua kemungkinan dan keduanya
+    // tercetak berdampingan di formulir aslinya.
+    $jenisPenelitian = array_map(
+        fn (JenisPenelitian $j) => ['id' => $j->value, 'name' => $j->label()],
+        JenisPenelitian::cases(),
     );
 @endphp
 <div>
@@ -21,6 +29,14 @@
             <x-mary-input label="Peneliti utama" wire:model="peneliti_utama" required />
             <x-mary-textarea label="Tim peneliti" wire:model="tim_peneliti" hint="Pisahkan dengan koma" rows="2" />
             <x-mary-textarea label="Judul penelitian" wire:model="judul_penelitian" rows="3" required />
+
+            {{-- Poin A formulir etik KEPK. Ditanyakan di sini supaya formulir etik
+                 tahap 2 tidak menanyakan ulang hal yang sudah pasti sejak awal. --}}
+            <x-mary-radio label="Jenis penelitian" wire:model="jenis_penelitian" :options="$jenisPenelitian" />
+            <x-mary-input label="Lokasi penelitian" wire:model="lokasi_penelitian"
+                hint="Tempat penelitian dilaksanakan" required />
+            <x-mary-input label="Sponsor / pemberi grant (opsional)" wire:model="sponsor"
+                hint="Kosongkan bila penelitian dibiayai sendiri" />
 
             <x-mary-file label="Surat pengantar (wajib)" :hint="DocumentType::SuratPengantar->hintUnggah()"
                 wire:model="surat_pengantar" accept="application/pdf" required />
