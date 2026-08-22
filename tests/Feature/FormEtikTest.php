@@ -155,11 +155,22 @@ class FormEtikTest extends TestCase
         return $c;
     }
 
-    /** Data URL PNG seperti yang dikirim kanvas x-mary-signature. */
+    /**
+     * Data URL PNG seperti yang dikirim kanvas x-mary-signature.
+     *
+     * PNG-nya harus SUNGGUHAN, bukan sekadar string ber-awalan yang benar:
+     * dompdf baru memanggil GD ketika gambarnya benar-benar bisa dibaca, jadi
+     * payload palsu membuat tes cetak PDF lewat tanpa pernah menyentuh jalur
+     * gambar — persis cacat yang membuat galat "PHP GD extension is required"
+     * baru ketahuan di server, bukan di sini.
+     */
     protected function tandaTangan(): string
     {
-        return 'data:image/png;base64,'.base64_encode('goresan-uji');
+        return 'data:image/png;base64,'.self::PNG_1X1;
     }
+
+    /** PNG 1x1 transparan yang sah. */
+    public const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
     public function test_kirim_berkas_etik_tanpa_tanda_tangan_ditolak(): void
     {

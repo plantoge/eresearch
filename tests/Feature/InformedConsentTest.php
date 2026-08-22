@@ -49,10 +49,15 @@ class InformedConsentTest extends TestCase
         $this->actingAs($this->peneliti);
     }
 
-    /** Data URL PNG seperti yang dikirim kanvas x-mary-signature. */
+    /**
+     * Data URL PNG seperti yang dikirim kanvas x-mary-signature.
+     *
+     * PNG sungguhan, bukan string ber-awalan benar — lihat alasannya di
+     * FormEtikTest::tandaTangan().
+     */
     protected function tandaTangan(): string
     {
-        return 'data:image/png;base64,'.base64_encode('goresan-uji');
+        return 'data:image/png;base64,'.FormEtikTest::PNG_1X1;
     }
 
     protected function proposalTahapEtik(): Proposal
