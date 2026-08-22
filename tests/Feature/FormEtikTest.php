@@ -217,6 +217,42 @@ class FormEtikTest extends TestCase
     }
 
     /**
+     * Tanda tangan lama harus diberi peringatan di layar.
+     *
+     * Browser menampilkan pratinjau PNG dengan baik, jadi peneliti melihat tanda
+     * tangannya utuh dan tidak punya alasan menggambar ulang — lalu bingung
+     * ketika hasil cetaknya kosong. Peringatan inilah satu-satunya penghubung
+     * antara apa yang terlihat di layar dan apa yang benar-benar bisa dicetak.
+     */
+    public function test_tanda_tangan_lama_diberi_peringatan_di_form(): void
+    {
+        $p = $this->proposalTahapEtik();
+
+        $this->kartuEtik($p)
+            ->set('formEtik.tanda_tangan', 'data:image/png;base64,'.self::PNG_1X1)
+            ->call('kirimBerkasEtik')
+            ->assertHasNoErrors();
+
+        app(ProposalWorkflow::class)->transition($p->fresh(), S::PerluRevisiBerkasEtik, 'Perbaiki');
+
+        Livewire::test(Show::class, ['proposal' => $p->fresh()])
+            ->assertSee('tidak dapat dicetak')
+            ->assertSee('Gambar ulang');
+    }
+
+    /** Tanda tangan SVG tidak boleh ikut diberi peringatan itu. */
+    public function test_tanda_tangan_svg_tidak_diberi_peringatan(): void
+    {
+        $p = $this->proposalTahapEtik();
+        $this->kartuEtik($p)->call('kirimBerkasEtik')->assertHasNoErrors();
+
+        app(ProposalWorkflow::class)->transition($p->fresh(), S::PerluRevisiBerkasEtik, 'Perbaiki');
+
+        Livewire::test(Show::class, ['proposal' => $p->fresh()])
+            ->assertDontSee('tidak dapat dicetak');
+    }
+
+    /**
      * PDF tidak boleh memuat gambar raster.
      *
      * Server produksi memakai FrankenPHP tanpa GD; setiap PNG di dalam PDF
