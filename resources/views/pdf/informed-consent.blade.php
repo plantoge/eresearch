@@ -65,11 +65,7 @@
         <div class="ttd">
             Jakarta, {{ $consent->dikirim_pada?->translatedFormat('d F Y') ?: '—' }}<br>
             Peneliti,
-            @if ($consent->tanda_tangan)
-                <div><img src="{{ $consent->tanda_tangan }}" alt="Tanda tangan" height="56"></div>
-            @else
-                <div class="ruang"></div>
-            @endif
+            @include('pdf.partials.tanda-tangan', ['tandaTangan' => $consent->tanda_tangan])
             {{ $proposal->peneliti_utama }}
         </div>
 

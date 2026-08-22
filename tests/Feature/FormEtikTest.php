@@ -156,20 +156,25 @@ class FormEtikTest extends TestCase
     }
 
     /**
-     * Data URL PNG seperti yang dikirim kanvas x-mary-signature.
+     * Data URL SVG seperti yang dikirim kanvas tanda tangan.
      *
-     * PNG-nya harus SUNGGUHAN, bukan sekadar string ber-awalan yang benar:
-     * dompdf baru memanggil GD ketika gambarnya benar-benar bisa dibaca, jadi
-     * payload palsu membuat tes cetak PDF lewat tanpa pernah menyentuh jalur
-     * gambar — persis cacat yang membuat galat "PHP GD extension is required"
-     * baru ketahuan di server, bukan di sini.
+     * SVG-nya harus SUNGGUHAN, bukan sekadar string ber-awalan yang benar:
+     * dompdf hanya menggambar berkas yang benar-benar bisa diurai, jadi payload
+     * palsu membuat tes cetak PDF lewat tanpa pernah menyentuh jalur gambar —
+     * persis cacat yang membuat galat "PHP GD extension is required" baru
+     * ketahuan di server, bukan di sini.
      */
     protected function tandaTangan(): string
     {
-        return 'data:image/png;base64,'.self::PNG_1X1;
+        return 'data:image/svg+xml;base64,'.base64_encode(self::SVG_GORESAN);
     }
 
-    /** PNG 1x1 transparan yang sah. */
+    /** Goresan vektor sederhana — bentuk yang sama dengan keluaran signature_pad. */
+    public const SVG_GORESAN = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="100">'
+        .'<path d="M10 80 C 40 10, 65 10, 95 80 S 150 150, 180 80" stroke="black" stroke-width="3" fill="none"/>'
+        .'</svg>';
+
+    /** PNG 1x1 transparan yang sah — bentuk tanda tangan LAMA, sebelum pindah ke SVG. */
     public const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
     public function test_kirim_berkas_etik_tanpa_tanda_tangan_ditolak(): void
@@ -187,7 +192,7 @@ class FormEtikTest extends TestCase
      * cukup: tanpa pemeriksaan bentuk, sampah tersimpan lalu muncul sebagai
      * gambar rusak di PDF resmi.
      */
-    public function test_tanda_tangan_yang_bukan_gambar_png_ditolak(): void
+    public function test_tanda_tangan_yang_bukan_gambar_ditolak(): void
     {
         $this->kartuEtik()
             ->set('formEtik.tanda_tangan', 'bukan-gambar')
@@ -195,6 +200,41 @@ class FormEtikTest extends TestCase
             ->assertHasErrors(['formEtik.tanda_tangan' => 'regex']);
 
         $this->assertDatabaseCount('rspi.kepk_form_etik', 0);
+    }
+
+    /**
+     * Tanda tangan PNG dari formulir lama tetap diterima.
+     *
+     * Menolaknya berarti mengunci peneliti yang menandatangani sebelum pindah ke
+     * SVG: form perbaikan memuat ulang nilai lamanya, lalu menolaknya sendiri.
+     */
+    public function test_tanda_tangan_png_lama_tetap_diterima(): void
+    {
+        $this->kartuEtik()
+            ->set('formEtik.tanda_tangan', 'data:image/png;base64,'.self::PNG_1X1)
+            ->call('kirimBerkasEtik')
+            ->assertHasNoErrors();
+    }
+
+    /**
+     * PDF tidak boleh memuat gambar raster.
+     *
+     * Server produksi memakai FrankenPHP tanpa GD; setiap PNG di dalam PDF
+     * membuat dompdf melempar "The PHP GD extension is required" dan seluruh
+     * pencetakan gagal — bukan sekadar kehilangan satu gambar.
+     */
+    public function test_pdf_tidak_memuat_gambar_raster(): void
+    {
+        $p = $this->proposalBerformulir();
+
+        $html = (string) $this->view('pdf.formulir-etik', [
+            'proposal' => $p,
+            'form' => $p->formEtik,
+            'butir' => KelengkapanDokumen::cases(),
+        ]);
+
+        $this->assertStringContainsString('data:image/svg+xml', $html);
+        $this->assertStringNotContainsString('data:image/png', $html);
     }
 
     public function test_tanda_tangan_tersimpan_dan_terisi_ulang(): void

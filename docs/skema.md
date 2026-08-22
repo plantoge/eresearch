@@ -318,7 +318,7 @@ di `proposal`.
 | `pernah_diajukan` | bool. Bila true → `disetujui_komisi_lain` wajib |
 | `sampel_ke_luar_negeri` | bool. Bila true → `negara_tujuan` wajib |
 | `registrasi_bpom` | text null — jawaban bebas Poin C.5 |
-| `tanda_tangan` | data URL PNG dari kanvas `x-mary-signature` — lihat `App\Support\TandaTangan` |
+| `tanda_tangan` | data URL **SVG** dari kanvas tanda tangan (`<x-tanda-tangan>`). Vektor, bukan raster: dompdf memerlukan GD untuk setiap gambar raster dan PHP di FrankenPHP produksi dibangun tanpa GD. Lihat `App\Support\TandaTangan` |
 | `dikirim_pada` | timestamp saat formulir dikirim; **null = masih draf** |
 
 Jawaban lanjutan yang syaratnya gugur **dikosongkan saat disimpan**, supaya tidak ada dua
@@ -342,7 +342,7 @@ bukan persetujuan yang sudah terkumpul.
 | `alasan_tanpa_consent` | text null — alasannya tetap dicatat supaya KEPK menilai, bukan menebak |
 | `peran_peneliti` / `maksud_penelitian` | mengisi kalimat pembuka; instansi tidak disalin — sudah ada di `proposal` |
 | `lembar_informasi` | json `{bagian: teks}` — 14 bagian naratif, enum `BagianLembarInformasi` |
-| `tanda_tangan` | data URL PNG; wajib hanya bila merekrut partisipan |
+| `tanda_tangan` | data URL SVG; wajib hanya bila merekrut partisipan |
 | `dikirim_pada` | timestamp saat dikirim; **null = masih draf** |
 
 Jawaban yang syaratnya gugur dikosongkan saat disimpan. Dibaca lewat modal di kartu Dokumen

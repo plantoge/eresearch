@@ -116,7 +116,7 @@ class PksCruTest extends TestCase
             ->set('formEtik.peneliti_asing', '0')
             ->set('formEtik.pernah_diajukan', '0')
             ->set('formEtik.sampel_ke_luar_negeri', '0')
-            ->set('formEtik.tanda_tangan', 'data:image/png;base64,'.FormEtikTest::PNG_1X1)
+            ->set('formEtik.tanda_tangan', 'data:image/svg+xml;base64,'.base64_encode(FormEtikTest::SVG_GORESAN))
             ->set('informedConsent.merekrut_partisipan', '0')
             ->set('informedConsent.alasan_tanpa_consent', 'Data sekunder, tanpa kontak subjek');
 

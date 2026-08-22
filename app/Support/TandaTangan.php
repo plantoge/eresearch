@@ -3,27 +3,43 @@
 namespace App\Support;
 
 /**
- * Tanda tangan yang digambar di kanvas `x-mary-signature`.
+ * Tanda tangan yang digambar di kanvas.
  *
- * Nilainya data URL PNG (`data:image/png;base64,...`) yang dikirim komponen apa
- * adanya lewat wire:model. Disimpan sebagai kolom teks, bukan berkas di disk:
- * ia bagian dari isian formulir — bukan lampiran yang punya versi sendiri — dan
- * dompdf bisa merendernya langsung lewat `<img src="data:...">`.
+ * Disimpan sebagai **SVG** (`data:image/svg+xml;base64,...`), bukan PNG.
+ * Alasannya bukan selera: dompdf memerlukan `imagecreatefrompng()` — dan dengan
+ * itu ekstensi GD — untuk setiap gambar raster, sedangkan SVG dirender lewat
+ * php-svg-lib tanpa ekstensi gambar apa pun. Server produksi memakai FrankenPHP
+ * yang PHP-nya dibangun tanpa GD, jadi tanda tangan raster membuat seluruh
+ * pencetakan formulir gagal dengan "The PHP GD extension is required".
+ *
+ * Tanda tangan memang aslinya rangkaian garis; ia hanya menjadi raster karena
+ * `toDataURL()` memotretnya. Menyimpannya sebagai vektor mengembalikannya ke
+ * bentuk semula — dan hasil cetaknya lebih tajam.
  */
 class TandaTangan
 {
+    public const AWALAN_SVG = 'data:image/svg+xml;base64,';
+
     /**
-     * `required` saja tidak cukup: kanvas yang tidak pernah disentuh tetap bisa
-     * mengirim string apa pun dari klien, dan tanpa pemeriksaan bentuk, sampah
-     * itu tersimpan lalu muncul sebagai gambar rusak di PDF resmi.
+     * PNG masih DITERIMA walau tidak lagi dihasilkan.
      *
-     * Batas panjangnya menjaga kolom teks dari kiriman raksasa; ~2 juta karakter
-     * base64 setara gambar 1,5 MB, jauh di atas tanda tangan wajar (10–40 KB).
+     * Formulir yang terlanjur ditandatangani sebelum perubahan ini menyimpan
+     * PNG, dan `isiDari()` memuatnya kembali ke form saat peneliti membuka
+     * halaman perbaikan. Menolaknya di sini akan mengunci berkas mereka di layar
+     * revisi tanpa jalan keluar, padahal tidak ada yang salah dengan isinya.
+     *
+     * Batas panjangnya menjaga kolom teks dari kiriman raksasa.
      */
     public const ATURAN = [
         'required',
         'string',
         'max:2000000',
-        'regex:/^data:image\/png;base64,[A-Za-z0-9+\/=\s]+$/',
+        'regex:/^data:image\/(svg\+xml|png);base64,[A-Za-z0-9+\/=\s]+$/',
     ];
+
+    /** Bisa dicetak ke PDF tanpa GD? Hanya SVG yang bisa. */
+    public static function adalahSvg(?string $nilai): bool
+    {
+        return is_string($nilai) && str_starts_with($nilai, self::AWALAN_SVG);
+    }
 }
